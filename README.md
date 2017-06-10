@@ -11,5 +11,3 @@ Full version of the paper published at WPES 2016 is available at http://www.cs.u
 #### Structure of the repository
 This repository includes:
 
-  * A mock implementation of a credential server for evaluation purposes [cred_server.py](cred_server.py)
-  * An OpenID Connect provider reference implementation, forked from @rohe/pyoidc 
