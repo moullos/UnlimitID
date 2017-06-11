@@ -4,7 +4,7 @@ from flask import g, render_template, request, jsonify, make_response
 from flask_oauthlib.provider import OAuth2Provider
 from flask_oauthlib.contrib.oauth2 import bind_sqlalchemy
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
-from flask import Flask
+from flask import Flask, flash, redirect, url_for
 from models import db, Client, User, Token, Grant
 from forms import SignupForm
 from werkzeug import generate_password_hash, check_password_hash
@@ -118,6 +118,7 @@ def create_server(app, oauth=None):
 
     @app.before_request
     def load_current_user():
+        # needs fixing -> flask-login
         user = User.query.get(1)
         g.user = user
     
@@ -127,7 +128,7 @@ def create_server(app, oauth=None):
         """
         A page for clients to signup to the IdP
         """
-        pass
+        return render_template('underConstruction.html')
     
     @app.route('/login')
     def login(*args, **kwargs):    
@@ -135,16 +136,45 @@ def create_server(app, oauth=None):
         A page for the users to login
         Session management is necessary here -> flask-login might come in handy
         """
-        pass
+        return render_template('underConstruction.html')
 
-    @app.route('/signup')
+    @app.route('/signup', methods=['GET', 'POST'])
     def register(*args, **kwargs):
         """
         A page with a form for users to signup to the IdP
         Get the data from the form and store it in the database
         """
-        pass
-
+        try:
+            form = SignupForm(request.form)
+            if request.method == 'POST' and form.validate():           
+                username= form.username.data
+                firstname = form.firstname.data
+                lastname = form.lastname.data
+                email = form.email.data
+                password = form.password.data
+            
+                user = User.query.filter_by(username=username).first()
+                if user != None:
+                    # Check if the username already exists
+                    flash("Username already exists")
+                    return render_template("signup.html", form=form)
+                else:
+                    user = User.query.filter_by(email=email).first()
+                    if user != None:
+                        flash("Email already exist")
+                        return render_template("signup.html", form=form)
+                    else:    
+                        # Add the user to the db
+                        user = User(username = username, firstname = firstname, lastname = lastname, email = email, password = password)
+                        db.session.add(user)
+                        db.session.commit()
+                        flash("Thanks for signing up")
+                        return redirect(url_for('login'))
+            return render_template('signup.html', form=form)
+        
+        except Exception as e:
+            return(str(e))
+    
     @app.route('/credential')
     def credential(*args, **kwargs):
         """
@@ -152,14 +182,14 @@ def create_server(app, oauth=None):
         This page should be available to logged in users
 
         Info needed:
-        SUB(Blinded) -> user's secret
+    a    SUB(Blinded) -> user's secret
         KEY -> attributes keys
         VALUE -> attributes values
         EXP -> Expiry
         Then BlindIssue() to return a credential (probably in JSON)
         """
-        pass
-
+        return render_template('underConstruction.html')
+    
     @app.route('/register')
     def register_pseudo(*args, **kwargs):
         """
@@ -170,7 +200,7 @@ def create_server(app, oauth=None):
         the exp time. Note that a user is not supposed to be logged in at this point
         as that violates unlinkability between the pseudonyms and the users.
         """
-        pass  
+        return render_template('underConstruction.html')
 
     @app.route('/home')
     def home():

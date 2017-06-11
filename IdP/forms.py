@@ -1,31 +1,19 @@
-from wtforms import Form, validators
-from wtforms.fields import TextField, TextAreaField, SubmitField, PasswordField
 from models import db, Client
 
+from wtforms import Form, BooleanField, StringField, PasswordField, validators
+
 class SignupForm(Form):
-  firstname = TextField("First name",  [validators.Required("Please enter your first name.")])
-  lastname = TextField("Last name",  [validators.Required("Please enter your last name.")])
-  email = TextField("Email",  [validators.Required("Please enter your email address."), validators.Email("Please enter your email address.")])
-  password = PasswordField('Password', [validators.Required("Please enter a password.")])
-  submit = SubmitField("Create account")
- 
-  def __init__(self, *args, **kwargs):
-    Form.__init__(self, *args, **kwargs)
- 
-  def validate(self):
-    if not Form.validate(self):
-      return False
-    return True
-    """ 
-    user = Client.query.filter_by(email = self.email.data.lower()).first()
-    if user:
-      self.email.errors.append("That email is already taken")
-      return False
-    else:
-      return True
-    """
+    username = StringField('Username', [validators.Length(min=4, max=25)])
+    firstname = StringField('Firstname',[validators.Length(min=4, max=25)])
+    lastname = StringField('Lastname', [validators.Length(min=4,max=25)])
+    email = StringField('Email Address', [validators.Email("Please enter your email address")])
+    password = PasswordField('New Password', [
+        validators.DataRequired(),
+        validators.EqualTo('confirm', message='Passwords must match')
+    ])
+    confirm = PasswordField('Repeat Password')
 
-
+"""
 class AuthorizationForm(Form):
   email = TextField("Email",  [validators.Required("Please enter your email address."), validators.Email("Please enter your email address.")])
   password = PasswordField('Password', [validators.Required("Please enter a password.")])
@@ -44,3 +32,5 @@ class AuthorizationForm(Form):
     else:
       self.email.errors.append("Invalid e-mail or password")
       return False
+
+"""
