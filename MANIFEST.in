@@ -1,0 +1,2 @@
+graft IdP/templates
+graft IdP/static

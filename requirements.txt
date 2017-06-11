@@ -1,0 +1,7 @@
+Flask==0.11.1
+mock==2.0.0
+oauthlib==1.1.2
+requests-oauthlib==0.6.2
+Flask-SQLAlchemy==2.1
+flask-wtf
+Flask-OAuthlib==0.9.4
