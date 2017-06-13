@@ -5,3 +5,4 @@ requests-oauthlib==0.6.2
 Flask-SQLAlchemy==2.1
 flask-wtf
 Flask-OAuthlib==0.9.4
+git+https://github.com/gdanezis/petlib.git
