@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block body %}
+
+<body>
+    <div class = "container">
+        <h4>Login</h4>
+        {% from "_formhelpers.html" import render_field %}
+        <form method=post action="/login">
+            <dl>
+                {{render_field(form.email)}}
+                {{render_field(form.password)}}
+            </dl>
+            <p><input type=submit value=Login></p>
+        </form>
+        
+        {% if error %}
+            <p class="error"><strong>Error:</strong>{{error}}</p>
+        {% endif %}
+
+    </div>
+</body>
+
+{% endblock %}
