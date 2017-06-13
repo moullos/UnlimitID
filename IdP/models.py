@@ -28,7 +28,6 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.pwdhash, password)
 
-
 class Client(db.Model):
     # id = db.Column(db.Integer, primary_key=True)
     # human readable name
