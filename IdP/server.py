@@ -1,14 +1,23 @@
 # coding: utf-8
-from datetime import datetime, timedelta
-from flask import g, render_template, request, jsonify, make_response
+# Flask related imports
+from flask import g, render_template, request, Response, jsonify, make_response ,session
 from flask_oauthlib.provider import OAuth2Provider
 from flask_oauthlib.contrib.oauth2 import bind_sqlalchemy
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask import Flask, flash, redirect, url_for
+
+# Timestamps
+from datetime import datetime, timedelta
+# Db objects
 from models import db, Client, User, Token, Grant
-from forms import SignupForm
+# Forms templates
+from forms import SignupForm, LoginForm
+# Hashes for storing passwords
 from werkzeug import generate_password_hash, check_password_hash
- 
+# CredentialServer provides amacs credential functionality
+from cred_server import CredentialServer
+from petlib.pack import decode, encode 
+
 def current_user():
     return g.user
 
@@ -101,9 +110,7 @@ def prepare_app(app):
   
     try:
         db.session.add(client1)
-        db.session.add(client2)
         db.session.add(user)
-        db.session.add(user2)
         db.session.commit()
     except:
         db.session.rollback()
@@ -115,13 +122,14 @@ def create_server(app, oauth=None):
         oauth = default_provider(app)
 
     app = prepare_app(app)
-
+    cs = CredentialServer()
     @app.before_request
     def load_current_user():
-        # needs fixing -> flask-login
-        user = User.query.get(1)
+        if 'used_id' in session:
+            user = User.query.filter_by(id=session['user_id']).first()
+        else: 
+            user = {}
         g.user = user
-    
     
     @app.route('/client_signup')
     def client_signup(*args, **kwargs):
@@ -130,16 +138,31 @@ def create_server(app, oauth=None):
         """
         return render_template('underConstruction.html')
     
-    @app.route('/login')
+    @app.route('/login', methods=['GET','POST'])
     def login(*args, **kwargs):    
         """
         A page for the users to login
-        Session management is necessary here -> flask-login might come in handy
         """
-        return render_template('underConstruction.html')
+        form = LoginForm(request.form)
+        try:
+            if request.method == 'POST' and form.validate():
+                email = form.email.data
+                password = form.password.data
+                user = User.query.filter_by(email=email).first()
+                if user != None and check_password_hash(user.pwdhash, password):
+                    session['logged_in'] = True
+                    session['user_id'] = user.id
+                    flash("Welcome {}".format(user.username))
+                    return redirected(url_for('home'))
+                else:
+                    flash("Wrong Credential")
+            return render_template('login.html', form=form)
 
+        except Exception as e:
+            print(str(e))
+            
     @app.route('/signup', methods=['GET', 'POST'])
-    def register(*args, **kwargs):
+    def signup(*args, **kwargs):
         """
         A page with a form for users to signup to the IdP
         Get the data from the form and store it in the database
@@ -161,11 +184,12 @@ def create_server(app, oauth=None):
                 else:
                     user = User.query.filter_by(email=email).first()
                     if user != None:
-                        flash("Email already exist")
+                        flash("Email already exists")
                         return render_template("signup.html", form=form)
                     else:    
                         # Add the user to the db
-                        user = User(username = username, firstname = firstname, lastname = lastname, email = email, password = password)
+                        user = User(username = username, firstname = firstname, 
+                            lastname = lastname, email = email, password = password)
                         db.session.add(user)
                         db.session.commit()
                         flash("Thanks for signing up")
@@ -175,22 +199,34 @@ def create_server(app, oauth=None):
         except Exception as e:
             return(str(e))
     
-    @app.route('/credential')
+    @app.route('/unlimitID/.well-known/info', methods = ['POST'])
+    def info():
+        """
+        A page that exposes the server's public parameters
+        """
+        return encode( cs.get_info() )
+
+    @app.route('/unlimitID/credential', methods = ['GET', 'POST'])
     def credential(*args, **kwargs):
         """
         A page for users to request credentials
         This page should be available to logged in users
 
         Info needed:
-    a    SUB(Blinded) -> user's secret
+        SUB(Blinded) -> user's secret
         KEY -> attributes keys
         VALUE -> attributes values
-        EXP -> Expiry
-        Then BlindIssue() to return a credential (probably in JSON)
+        EXP -> timeout
+        Then issue_credential() to return a credential
         """
-        return render_template('underConstruction.html')
+        if request.method == 'POST':
+            # User authentication required
+            if g.user != {}:
+                user_token, public_attr = decode(request.data)
+                cred_issued = cs.issue_credential(user_token, public_attr)
+                return encode(cred_issued)
     
-    @app.route('/register')
+    @app.route('/unlimitID/register')
     def register_pseudo(*args, **kwargs):
         """
         A page for a user to register a pseudonym for a particular RP
@@ -202,9 +238,19 @@ def create_server(app, oauth=None):
         """
         return render_template('underConstruction.html')
 
+    @app.route('/')
+    def root():
+        return redirect(url_for('home'))
+
     @app.route('/home')
     def home():
-        return render_template('home.html')
+        """
+        Server's initial page
+        """
+        if g.user != {}:
+            flash('You are currently logged in as {}'.format(g.user.username))
+        #FIXME: Some hyperlinks in home.html would be appreciated
+        return render_template('home.html')    
 
     @app.route('/oauth/authorize', methods=['GET', 'POST'])
     @oauth.authorize_handler
@@ -223,6 +269,7 @@ def create_server(app, oauth=None):
         if request.method == 'GET':
             return render_template('confirm.html')
         
+
         if request.method == 'HEAD':
             # if HEAD is supported properly, request parameters like
             # client_id should be validated the same way as for 'GET'
