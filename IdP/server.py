@@ -1,4 +1,3 @@
-# coding: utf-8
 # Flask related imports
 from flask import g, render_template, request, Response, jsonify, make_response ,session
 from flask_oauthlib.provider import OAuth2Provider
@@ -9,7 +8,7 @@ from flask import Flask, flash, redirect, url_for
 # Timestamps
 from datetime import datetime, timedelta
 # Db objects
-from models import db, Client, User, Token, Grant
+from models import db, Client, User, Token, Grant, Pseudonym
 # Forms templates
 from forms import SignupForm, LoginForm
 # Hashes for storing passwords
@@ -17,6 +16,14 @@ from werkzeug import generate_password_hash, check_password_hash
 # CredentialServer provides amacs credential functionality
 from cred_server import CredentialServer
 from petlib.pack import decode, encode 
+
+# TODO: THESE SHOULD GO IN A CONFIG FILE
+# pseudonym entry lifetime after a users registers it
+PSEUDONYM_ENTRY_LIFETIME = 300
+# The keys a user exposes to a client
+ANONYMOUS_KEYS = ['name', 'gender', 'zoneinfo', 'birthdate' ]
+# Credential Lifetime. Default is two weeks
+CREDENTIAL_LIFETIME = 1209600
 
 def current_user():
     return g.user
@@ -70,7 +77,7 @@ def default_provider(app):
             redirect_uri=request.redirect_uri,
             scope=' '.join(request.scopes),
             user_id=g.user.id,
-            expires=expires,
+            expires=expires
         )
         db.session.add(grant)
         db.session.commit()
@@ -89,7 +96,7 @@ def default_provider(app):
     def get_user(username, password, *args, **kwargs):
         # This is optional, if you don't need password credential
         # there is no need to implement this method
-        return User.query.filter_by(username=username).first()
+        return User.query.filter_by(name=username).first()
 
     return oauth
 
@@ -104,9 +111,18 @@ def prepare_app(app):
             'http://localhost:8000/authorized '
             'http://localhost/authorized'
         ),
+        client_type = 'confidential',
     )
-    user = User(username='admin', firstname ='Panayiotis', lastname ='Moullotos', email='admin@gmail.com', password='12345')
-    user2 = User(username='user', firstname ='user1', lastname='user1', email='user@gmail.com', password='123456')
+    user = User(
+                name='admin', 
+                given_name ='Panayiotis', 
+                family_name ='Moullotos', 
+                email='admin@gmail.com', 
+                email_verified = True,
+                gender = 'Male',
+                zoneinfo = 'UK\London',
+                birthdate = '1991-09-29',
+                password='12345')
   
     try:
         db.session.add(client1)
@@ -125,7 +141,7 @@ def create_server(app, oauth=None):
     cs = CredentialServer()
     @app.before_request
     def load_current_user():
-        if 'used_id' in session:
+        if 'used_sub' in session:
             user = User.query.filter_by(id=session['user_id']).first()
         else: 
             user = {}
@@ -152,8 +168,8 @@ def create_server(app, oauth=None):
                 if user != None and check_password_hash(user.pwdhash, password):
                     session['logged_in'] = True
                     session['user_id'] = user.id
-                    flash("Welcome {}".format(user.username))
-                    return redirected(url_for('home'))
+                    flash("Welcome {}".format(user.name))
+                    return redirect(url_for('home'))
                 else:
                     flash("Wrong Credential")
             return render_template('login.html', form=form)
@@ -170,13 +186,16 @@ def create_server(app, oauth=None):
         try:
             form = SignupForm(request.form)
             if request.method == 'POST' and form.validate():           
-                username= form.username.data
-                firstname = form.firstname.data
-                lastname = form.lastname.data
+                name= form.username.data
+                given_name = form.firstname.data
+                family_name = form.lastname.data
                 email = form.email.data
+                gender = form.gender.data
+                zoneinfo = form.zoneinfo.data
+                birthdata = form.birthdate.data
                 password = form.password.data
             
-                user = User.query.filter_by(username=username).first()
+                user = User.query.filter_by(name=name).first()
                 if user != None:
                     # Check if the username already exists
                     flash("Username already exists")
@@ -188,8 +207,16 @@ def create_server(app, oauth=None):
                         return render_template("signup.html", form=form)
                     else:    
                         # Add the user to the db
-                        user = User(username = username, firstname = firstname, 
-                            lastname = lastname, email = email, password = password)
+                        user = User(
+                            name = username, 
+                            given_name = given_name, 
+                            family_name = family_name,
+                            email = email, 
+                            gender = gender,
+                            zoneinfo = zoneinfo,
+                            birthdate = birthdate,
+                            password = password
+                            )
                         db.session.add(user)
                         db.session.commit()
                         flash("Thanks for signing up")
@@ -206,27 +233,30 @@ def create_server(app, oauth=None):
         """
         return encode( cs.get_info() )
 
-    @app.route('/unlimitID/credential', methods = ['GET', 'POST'])
+    @app.route('/unlimitID/credential', methods = ['POST'])
     def credential(*args, **kwargs):
         """
         A page for users to request credentials
-        This page should be available to logged in users
-
-        Info needed:
-        SUB(Blinded) -> user's secret
-        KEY -> attributes keys
-        VALUE -> attributes values
-        EXP -> timeout
-        Then issue_credential() to return a credential
         """
-        if request.method == 'POST':
-            # User authentication required
-            if g.user != {}:
-                user_token, public_attr = decode(request.data)
-                cred_issued = cs.issue_credential(user_token, public_attr)
-                return encode(cred_issued)
-    
-    @app.route('/unlimitID/register')
+        try:
+            email ,password, user_token  = decode(request.data)
+        except Exception as e:
+            print(str(e))
+            return "Decode failed"
+        #Checking the user's email and password
+        user = User.query.filter_by(email=email).first()
+        if user != None and user.check_password(password):
+            # Setting values, keys and timeout for the issued credential
+            values = user.get_values_by_keys(ANONYMOUS_KEYS)
+            timeout_date = datetime.utcnow() + timedelta(seconds=CREDENTIAL_LIFETIME)
+            timeout = timeout_date.isoformat()
+            cred_issued = cs.issue_credential(user_token, ANONYMOUS_KEYS, values, timeout)
+            return encode( (cred_issued, ANONYMOUS_KEYS, values, timeout) )
+        else:
+            return "Invalid Credentials"
+                
+           
+    @app.route('/unlimitID/register', methods = ['POST'])
     def register_pseudo(*args, **kwargs):
         """
         A page for a user to register a pseudonym for a particular RP
@@ -236,10 +266,51 @@ def create_server(app, oauth=None):
         the exp time. Note that a user is not supposed to be logged in at this point
         as that violates unlinkability between the pseudonyms and the users.
         """
-        return render_template('underConstruction.html')
+        # TODO: Check if the pseudonym exists and update it. 
+        try:
+            creds, sig_o, sig_openID, Service_name, pseudonym, keys, values, timeout = decode(request.data)
+        except Exception as e:
+            print(str(e))
+            return "Decode failed"
+        
+        # 1. Check if the credential has not expired
+        if datetime.utcnow() < datetime.strptime( timeout, "%Y-%m-%dT%H:%M:%S.%f" ):
+            # 2. Check if the credential is valid
+            if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, pseudonym, keys, values, timeout): 
+                # 3. Check if the service name is valid
+                client = Client.query.filter_by(name=Service_name).first()
+                if client!= None:
+                    # 4. Create a pseudonym entry containing the clients scope.
+                    attr = dict(zip(keys,values))
+                    scopes = client.default_scopes
+                    k = []
+                    v = []
+                    for scope in scopes:
+                        if scope not in attr:
+                            return "Invalid Scope"
+                        k.append(scope)
+                        v.append(attr[scope])
+                    new_entry = Pseudonym(
+                                  pseudonym = pseudonym,
+                                  client_id = client.client_id, 
+                                  keys = k,
+                                  values = v,
+                                  timeout = timeout
+                              )
+                    db.session.add(new_entry)
+                    db.session.commit()
+                    return "Pseudonym for {} created successfully".format(Service_name)
+                
+                else:
+                    return "Client {} not known".format(Service_name)
+            else:
+                return "Credential not valid"
+        else:
+            return "Credential Expired"
+
 
     @app.route('/')
-    def root():
+    def index():
         return redirect(url_for('home'))
 
     @app.route('/home')
@@ -264,12 +335,17 @@ def create_server(app, oauth=None):
         which attributes of his (locally blinded) credential to 
         reveal to the RP. After the IdP validates the credential,
         a database record with the revealed attributes is created.
+        client_id: id of the client
+        scopes: a list of scope
+        state: state parameter
+        redirect_uri: redirect_uri parameter
+        response_type: response_type parameter
         """
         # render a page for user to confirm the authorization
         if request.method == 'GET':
             return render_template('confirm.html')
         
-
+        
         if request.method == 'HEAD':
             # if HEAD is supported properly, request parameters like
             # client_id should be validated the same way as for 'GET'
@@ -278,7 +354,7 @@ def create_server(app, oauth=None):
             return response
         username = request.form.get('username')
         password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(name=username).first()
         if user != None and check_password_hash(user.pwdhash, password):
             g.user = user
             return True
@@ -305,7 +381,7 @@ def create_server(app, oauth=None):
     @oauth.require_oauth('email')
     def email_api():
         oauth = request.oauth
-        return jsonify(email=oauth.user.email, username=oauth.user.username)
+        return jsonify(email=oauth.user.email, username=oauth.user.name)
 
     @app.route('/api/client')
     @oauth.require_oauth()
@@ -317,7 +393,7 @@ def create_server(app, oauth=None):
     @oauth.require_oauth('address')
     def address_api(city):
         oauth = request.oauth
-        return jsonify(address=city, username=oauth.user.username)
+        return jsonify(address=city, username=oauth.user.name)
 
     @app.route('/api/method', methods=['GET', 'POST', 'PUT', 'DELETE'])
     @oauth.require_oauth()
