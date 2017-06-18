@@ -1,20 +1,18 @@
-# General imports
 import sys
 sys.path += ["amacscreds"]
 
 from amacscreds import cred_setup, cred_CredKeyge, cred_UserKeyge, cred_secret_issue_user, cred_secret_issue, cred_secret_issue_user_decrypt, cred_show, cred_show_check, cred_secret_issue_user_check
 from genzkp import *
 from petlib.pack import encode, decode
-
-
+from petlib.bn import Bn
 
 class CredentialServer():
-    def __init__(self, num_pub = 3, num_priv =1):
+    def __init__(self):
         
         """
             __init__ imports the long term required values from files
         """
-        self.n = num_pub + num_priv
+        self.n = 4
         try:
             with open('params', 'rb') as f: 
                 self.params = decode(f.read())
@@ -39,29 +37,38 @@ class CredentialServer():
     def get_info(self):
         return (self.params, self.ipub)
     
-    def issue_credential(self, (pub, EGenc, sig_u), public_attr):
+    def issue_credential(self, (pub, EGenc, sig_u), k, v, t):
         """
             TO BE USED FROM THE CREDENTIAL ISSUING ENDPOINT
             pub : users public key
             EGenc : encrypted secret
             sig_u : Proof of valid encryption
             public_attr: (key, value, timeout)
-            
+            keys : List of strings
+            values : List of strings
+            timeout : Str in ISO 8601 format
         """
-        try:
-            k, v, timeout = public_attr
+        keys, value, timeout = self.attr_to_bn(k, v, t)
+        public_attr = [keys, value, timeout]
+        # Testing using ZK if the user has knowledge of the secret
+        if not cred_secret_issue_user_check(self.params, pub, EGenc, sig_u):
+            raise Exception("Error: Issuing checks failed")
 
-            # Testing using ZK if the user has knowledge of the secret
-            if not cred_secret_issue_user_check(self.params, pub, EGenc, sig_u):
-                raise Exception("Error: Issuing checks failed")
+        cred_issued = cred_secret_issue(self.params, pub, EGenc, self.ipub, self.isec, public_attr)
+        return cred_issued
 
-            cred_issued = cred_secret_issue(self.params, pub, EGenc, self.ipub, self.isec, public_attr)
-            return cred_issued
-
-        except Exception as e:
-            print(e)
     
-    def check_pseudonym_and_credential(self, creds, sig_o, sig_openID, Service_name, Uid, public_attr):
+    def attr_to_bn(self, k, v, t):
+        " Transforms attr to Bn"
+        (_ ,_ ,_ ,o) = self.params
+        test = "".join(val for val in k)
+        
+        key = Bn.from_binary("".join(val.encode('UTF-8') for val in k)) % o
+        value = Bn.from_binary("".join(val.encode('UTF-8') for val in v)) % o
+        timeout = Bn.from_binary(t) % o
+        return key, value, timeout
+
+    def check_pseudonym_and_credential(self, creds, sig_o, sig_openID, Service_name, Uid, k, v, t):
         """
             TO BE USED FROM THE PSEUDONYM REGISTRATION ENDPOINT
             creds: the credential
@@ -74,10 +81,10 @@ class CredentialServer():
         (G, g, h, o) = self.params
         (u, Cmis, Cup) = creds
 
-        [ key, value, timeout ] = public_attr
+        key , value, timeout = self.attr_to_bn(k, v, t)
 
         if not cred_show_check(self.params, self.ipub, self.isec, creds, sig_o):
-            raise ExceptionE("Error: aMac failed")
+            raise Exception("Error: aMac failed")
         
         # Execute the verification on the proof 'sig_openID'
         Gid = G.hash_to_point(Service_name)
