@@ -1,16 +1,14 @@
 from flask import Flask, redirect, render_template, url_for, session, request, jsonify, abort
 from flask_oauthlib.client import OAuth
-from cred_client import CredentialClient
 import requests
 from petlib.pack import encode, decode
 def create_client(app):
     oauth = OAuth(app)
-    cs = CredentialClient()
     remote = oauth.remote_app(
         'dev',
         consumer_key='dev',
         consumer_secret='dev',
-        request_token_params={'scope': 'email'},
+        request_token_params={'scope': 'email name'},
         base_url='http://127.0.0.1:5000/api/',
         request_token_url=None,
         access_token_method='POST',
@@ -29,27 +27,6 @@ def create_client(app):
             ret = remote.get('email')
             return jsonify(ret.data)
         return redirect(url_for('login'))
-
-    
-    @app.route('/get_credential')
-    def get_credential():
-        """ 
-            The page for the user to obtain credentials.
-            The encrypted private attribute is given to the server
-            along with the public attributes
-        """
-        user_token = cs.get_encrypted_attribute()
-        r = requests.post("http://127.0.0.1:5000/unlimitID/credential", data=encode( (user_token, cs.public_attr) ))
-        cred = decode(r.content)
-        mac = cs.get_mac(cred, user_token)
-        session['cred'] = r.content
-        session['mac'] = encode(mac)
-        return redirect(url_for("register"))
-
-    @app.route('/register')    
-    def register():
-        
-        return render_template('underConstruction.html')
 
     @app.route('/login')
     def login():
