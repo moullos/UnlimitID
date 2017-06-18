@@ -4,11 +4,12 @@ sys.path += ["amacscreds"]
 
 # Crypto imports
 from petlib.pack import encode, decode
+from petlib.bn import Bn
 from amacscreds import cred_setup, cred_CredKeyge, cred_UserKeyge, cred_secret_issue_user, cred_secret_issue, cred_secret_issue_user_decrypt, cred_show, cred_show_check, cred_secret_issue_user_check
 from genzkp import *
 
 
-class CredentialClient():
+class CredentialUser():
     """
     A class to take care of all the needs the client has for credentials
     """
@@ -37,46 +38,90 @@ class CredentialClient():
                 self.private_attr = decode( f.read() )
         except IOError: 
             (_, _, _, o) = self.params
-            self.private_attr = o.random()
+            self.private_attr = [ o.random() ]
             with open('private_attr','wb+') as f:
                 f.write( encode(self.private_attr))
-        try:
-            with open('public_attr','rb') as f:
-                self.keypair = decode( f.read() )
-        except IOError:
-            self.keypair = cred_UserKeyge(self.params)
-            with open('keypair','wb+') as f:
-                f.write( encode(self.keypair))
-        # Just for testing
-        self.public_attr = [100, 200, 300]
-   
+
+    def attr_to_bn(self, k, v, t):
+        " Transforms attr to Bn"
+        (_ ,_ ,_ ,o) = self.params
+        test = "".join(val for val in k)
+        
+        key = Bn.from_binary("".join(val.encode('UTF-8') for val in k)) % o
+        value = Bn.from_binary("".join(val.encode('UTF-8') for val in v)) % o
+        timeout = Bn.from_binary(t) % o
+        return key, value, timeout
+  
+
     def get_encrypted_attribute(self):
         """ 
             TO BE USED FROM CREDENTIAL GETTER
-            public_attr = [key, value, timeout]
-            (pub, EGenc, sig_u) = user_token
         """
-        user_token =  cred_secret_issue_user(self.params, self.keypair, [ self.private_attr ])
+        user_token =  cred_secret_issue_user(self.params, self.keypair,  self.private_attr )
+        self.save_user_token(user_token)
         return user_token
 
-    def get_mac(self, cred, user_token):
-        (_, EGenc, _) = user_token
-        (u, EncE, sig_s) = cred
-        mac = cred_secret_issue_user_decrypt(self.params, self.keypair, u, EncE, self.ipub, self.public_attr, EGenc, sig_s)
-        return mac
+    def save_user_token(self, user_token):
+         with open('user_token', 'wb+') as f:
+            f.write(encode(user_token))
+    
+    def get_user_token(self):
+        try:
+            with open('user_token', 'rb') as f:
+                return(decode(f.read()))
+        except IOError:
+            raise Exception('Opening the file user_token failed')
 
-    def show(self, mac, cred, Service_name):
+
+    def save_credential_token(self, cred):
+        with open('cred', 'wb+') as f:
+            f.write(encode(cred))
+    
+    def get_credential_token(self):
+        try:
+            with open('cred', 'rb') as f:
+                return(decode(f.read()))
+        except IOError:
+            raise exception('Opening the file failed')
+    
+    def save_mac(self, mac):
+         with open('mac', 'wb+') as f:
+            f.write(encode(mac))
+    
+    def get_mac(self,mac):
+        try:
+            with open('mac', 'rb') as f:
+                return(decode(f.read()))
+        except IOError:
+            raise exception('Opening the file failed')
+
+    def issue_verify(self, cred_token, user_token):
+        cred_issued, k, v, t = cred_token
+        ( u, EncE, sig_s ) = cred_issued
+        ( _, EGenc, _ ) = user_token
+        keys, values, timeout = self.attr_to_bn(k, v, t)
+        public_attr = [keys , values, timeout]
+        mac = cred_secret_issue_user_decrypt(self.params, self.keypair, u, EncE, self.ipub, public_attr, EGenc, sig_s) 
+        self.save_credential_token(cred_token)
+        self.save_user_token(user_token)
+        self.save_mac(mac)
+    
+    
+    def show(self, Service_name, k, v, t):
         """
           TO BE USED FROM REGISTERING
-          Returns the ZK proofs are alla the data you have to sent to the server 
+          Returns the ZK proofs and all the data you have to sent to the server 
           to validate your previously issued credential
         """
         (G, g, h ,o) = self.params
-        (_, _, sig_s) = cred
-        (creds, sig_o, zis) = cred_show(self.params, self.ipub, mac, sig_s, public_attr + private_attr, export_zi= True)
+        public_attr = [key, value, timeout]
+        (_, EGenc, _) =  self.get_user_token()
+        (u, EncE, sig_s), k, v, t = self.get_credential_token()
+        key, value, timeout = self.attr_to_bn(k, v, t) 
+        mac = self.get_mac()
+        (creds, sig_o, zis) = cred_show(self.params, self.ipub, mac, sig_s, public_attr + self.private_attr, export_zi= True)
     
         [ LT_user_ID ] = self.private_attr
-        [ key, value, timeout ] = self.public_attr
 
         ## The credential contains a number of commitments to the attributes
         (u, Cmis, Cup) = creds
@@ -111,7 +156,7 @@ class CredentialClient():
 
         sig_openID = zk.build_proof(env.get())
 
-        return encode( (creds, sig_o, sig_openID, Service_name, Uid , public_attr) )
+        return (creds, sig_o, sig_openID, Service_name, Uid ,k ,v ,t)
 
 def define_proof(G):
     zk = ZKProof(G)
