@@ -6,42 +6,52 @@ from werkzeug import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 class User(db.Model):
+    # https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(40), unique=True, index=True,
+    name = db.Column(db.String(40), unique=True,
                          nullable=False)
-    firstname = db.Column(db.String(100), nullable=False)
-    lastname = db.Column(db.String(100), nullable=False)
+    given_name = db.Column(db.String(100), nullable=False)
+    family_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120),unique=True, 
+                        index=True, nullable=True)
+    email_verified = db.Column(db.Boolean())
+    gender = db.Column(db.String(20))
+    zoneinfo = db.Column(db.String(50))
     pwdhash = db.Column(db.String(54), nullable=False)
-    email = db.Column(db.String(120),unique=True, nullable=True)
-
-    def __init__(self, username, firstname, lastname, email, password):
-        self.username = username
-        self.firstname = firstname
-        self.lastname = lastname
-        self.email = email.lower()
+    birthdate = db.Column(db.String(20))
+    def __init__(self, **kwargs):
+        
+        _email = kwargs.pop('email')
+        self.email = _email.lower()
+        password = kwargs.pop('password')
         self.set_password(password)
-    
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def set_password(self, password):
         self.pwdhash = generate_password_hash(password)
-
-    @property
+    
     def check_password(self, password):
         return check_password_hash(self.pwdhash, password)
+    
+    def get_values_by_keys(self, keys):
+        result = []
+        for k in keys:
+            result.append(getattr(self,k,None))
+        return result
 
 class Client(db.Model):
     # id = db.Column(db.Integer, primary_key=True)
     # human readable name
-    name = db.Column(db.String(40))
-    client_id = db.Column(db.String(40), primary_key=True)
-    client_secret = db.Column(db.String(55), unique=True, index=True,
+    name = db.Column(db.String(40), nullable=False)
+    client_id = db.Column(db.String(40), primary_key=True,
+                            nullable=False)
+    client_secret = db.Column(db.String(55), unique=True,
                               nullable=False)
     client_type = db.Column(db.String(20), default='public')
     _redirect_uris = db.Column(db.Text)
-    default_scope = db.Column(db.Text, default='email address')
+    default_scope = db.Column(db.Text, default='email name')
 
-    @property
-    def user(self):
-        return User.query.get(1)
 
     @property
     def redirect_uris(self):
@@ -131,3 +141,39 @@ class Token(db.Model):
         db.session.commit()
         return self
 
+class Pseudonym(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # The client the pseudonym is giving access to
+    client_id = db.Column(
+        db.String(40), db.ForeignKey('client.client_id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    client = relationship('Client')
+    _pseudonym = db.Column(db.String(70), nullable=False, unique=True)
+    _keys = db.Column(db.String(255), nullable=False)
+    _values = db.Column(db.String(255), nullable=False)
+    def __init__(self, **kwargs):
+        
+        _pseudonym = kwargs.pop('pseudonym')
+        self._pseudonym = str(_pseudonym)
+        
+        _keys = kwargs.pop('keys')
+        self._keys = ','.join(_keys)
+        
+        _values = kwargs.pop('values')
+        self._values = ','.join(_values)
+
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def pseudonym(self):
+        return Bn.from_decimal(self._pseudonym)
+
+    @property
+    def keys(self):
+        return self._keys.split(',')
+
+    @property
+    def values(self):
+        return self._values.split(',')
