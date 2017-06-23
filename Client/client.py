@@ -8,7 +8,7 @@ def create_client(app):
         'dev',
         consumer_key='dev',
         consumer_secret='dev',
-        request_token_params={'scope': 'email name'},
+        request_token_params={'scope': 'name'},
         base_url='http://127.0.0.1:5000/api/',
         request_token_url=None,
         access_token_method='POST',
@@ -17,14 +17,13 @@ def create_client(app):
     )
     # To be added in a config file
     credential_url = "http://127.0.0.1:5000/unlimitID/credential"
-    register_url =  "http://127.0.0.1:5000/unlimitID/register"
 
 
 
     @app.route('/')
     def index():
         if 'dev_token' in session:
-            ret = remote.get('email')
+            ret = remote.get('name')
             return jsonify(ret.data)
         return redirect(url_for('login'))
 
@@ -46,6 +45,7 @@ def create_client(app):
                 request.args['error']
             )
         if isinstance(resp, dict) and 'access_token' in resp:
+            print 'Got a token'
             session['dev_token'] = (resp['access_token'], '')
             return jsonify(resp)
         return str(resp)
