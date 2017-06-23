@@ -13,33 +13,34 @@ class CredentialUser():
     """
     A class to take care of all the needs the client has for credentials
     """
-    def __init__(self):
+    def __init__(self, crypto_dir, info_url):
         """
         Loads long term values from files.
         If the server's public values are missing an Exception is raised.
         If any of the client's public values are missing, they are created.
         """ 
+	self.crypto_dir = crypto_dir
         import requests
-        r = requests.post("http://127.0.0.1:5000/unlimitID/.well-known/info")
+        r = requests.post(info_url)
         if r.status_code == 200:
             self.params, self.ipub = decode(r.content)
         elif r.status_code == 404:
             raise Exception("Page not found")
 
         try:
-            with open('keypair','rb') as f:
+            with open(self.crypto_dir + '/keypair','rb') as f:
                 self.keypair = decode( f.read() )
         except IOError:
             self.keypair = cred_UserKeyge(self.params)
-            with open('keypair','wb+') as f:
+            with open(self.crypto_dir + '/keypair','wb+') as f:
                 f.write( encode(self.keypair))
         try:
-            with open('private_attr','rb') as f:
+            with open(self.crypto_dir + '/private_attr','rb') as f:
                 self.private_attr = decode( f.read() )
         except IOError: 
             (_, _, _, o) = self.params
             self.private_attr = [ o.random() ]
-            with open('private_attr','wb+') as f:
+            with open(self.crypto_dir + '/private_attr','wb+') as f:
                 f.write( encode(self.private_attr))
 
     def attr_to_bn(self, k, v, t):
@@ -62,35 +63,35 @@ class CredentialUser():
         return user_token
 
     def save_user_token(self, user_token):
-         with open('user_token', 'wb+') as f:
+         with open(self.crypto_dir + '/user_token', 'wb+') as f:
             f.write(encode(user_token))
     
     def get_user_token(self):
         try:
-            with open('user_token', 'rb') as f:
+            with open(self.crypto_dir + '/user_token', 'rb') as f:
                 return(decode(f.read()))
         except IOError:
             raise Exception('Opening the file user_token failed')
 
 
     def save_credential_token(self, cred):
-        with open('cred', 'wb+') as f:
+        with open(self.crypto_dir + '/cred', 'wb+') as f:
             f.write(encode(cred))
     
     def get_credential_token(self):
         try:
-            with open('cred', 'rb') as f:
+            with open(self.crypto_dir + '/cred', 'rb') as f:
                 return(decode(f.read()))
         except IOError:
             raise exception('Opening the file failed')
     
     def save_mac(self, mac):
-         with open('mac', 'wb+') as f:
+         with open(self.crypto_dir + '/mac', 'wb+') as f:
             f.write(encode(mac))
     
-    def get_mac(self,mac):
+    def get_mac(self):
         try:
-            with open('mac', 'rb') as f:
+            with open(self.crypto_dir + '/mac', 'rb') as f:
                 return(decode(f.read()))
         except IOError:
             raise exception('Opening the file failed')
@@ -114,6 +115,7 @@ class CredentialUser():
           to validate your previously issued credential
         """
         (G, g, h ,o) = self.params
+        key, value, timeout = self.attr_to_bn(k ,v ,t)
         public_attr = [key, value, timeout]
         (_, EGenc, _) =  self.get_user_token()
         (u, EncE, sig_s), k, v, t = self.get_credential_token()
