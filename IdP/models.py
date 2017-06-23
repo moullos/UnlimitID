@@ -2,7 +2,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from werkzeug import generate_password_hash, check_password_hash
-
+from petlib.ec import EcPt
+from binascii import unhexlify
 db = SQLAlchemy()
 
 class User(db.Model):
@@ -50,7 +51,7 @@ class Client(db.Model):
                               nullable=False)
     client_type = db.Column(db.String(20), default='public')
     _redirect_uris = db.Column(db.Text)
-    default_scope = db.Column(db.Text, default='email name')
+    default_scope = db.Column(db.Text, default='name gender zoneinfo birthdate')
 
 
     @property
@@ -78,9 +79,9 @@ class Client(db.Model):
 class Grant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
-        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE')
+        db.String, db.ForeignKey('pseudonym.id', ondelete='CASCADE')
     )
-    user = relationship('User')
+    user = relationship('Pseudonym')
 
     client_id = db.Column(
         db.String(40), db.ForeignKey('client.client_id', ondelete='CASCADE'),
@@ -112,9 +113,9 @@ class Token(db.Model):
         nullable=False,
     )
     user_id = db.Column(
-        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE')
+        db.Integer, db.ForeignKey('pseudonym.id', ondelete='CASCADE')
     )
-    user = relationship('User')
+    user = relationship('Pseudonym')
     client = relationship('Client')
     token_type = db.Column(db.String(40))
     access_token = db.Column(db.String(255))
@@ -149,26 +150,26 @@ class Pseudonym(db.Model):
         nullable=False,
     )
     client = relationship('Client')
-    _pseudonym = db.Column(db.String(70), nullable=False, unique=True)
+    _uid = db.Column(db.String(70), nullable=False, unique=True)
     _keys = db.Column(db.String(255), nullable=False)
     _values = db.Column(db.String(255), nullable=False)
     def __init__(self, **kwargs):
         
-        _pseudonym = kwargs.pop('pseudonym')
-        self._pseudonym = str(_pseudonym)
+        uid = kwargs.pop('uid')
+        self._uid = str(uid)
         
-        _keys = kwargs.pop('keys')
-        self._keys = ','.join(_keys)
+        keys = kwargs.pop('keys')
+        self._keys = ','.join(keys)
         
-        _values = kwargs.pop('values')
-        self._values = ','.join(_values)
+        values = kwargs.pop('values')
+        self._values = ','.join(values)
 
         for k, v in kwargs.items():
             setattr(self, k, v)
 
     @property
-    def pseudonym(self):
-        return Bn.from_decimal(self._pseudonym)
+    def uid(self):
+        return EcPt.from_binary(unhexlify(self.uid))
 
     @property
     def keys(self):
@@ -177,3 +178,6 @@ class Pseudonym(db.Model):
     @property
     def values(self):
         return self._values.split(',')
+    @property
+    def attr(self):
+        return(dict(zip(self.keys,self.values)))
