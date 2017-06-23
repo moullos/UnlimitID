@@ -7,11 +7,12 @@ from forms import RegisterForm, CredentialForm
 
 
 # TODO: Add this to a config file
-credential_url = "http://127.0.0.1:5000/unlimitID/credential"
-register_url =  "http://127.0.0.1:5000/unlimitID/register"
+CREDENTIAL_URL = 'http://127.0.0.1:5000/unlimitID/credential'
+INFO_URL = 'http://127.0.0.1:5000/unlimitID/.well-known/info'
+CRYPTO_DIR = 'crypto'
 
 def create_user(app):  
-    cs = CredentialUser()
+    cs = CredentialUser(CRYPTO_DIR, INFO_URL)
     
     @app.route('/')
     def index():
@@ -34,7 +35,7 @@ def create_user(app):
             password = form.password.data
             user_token = cs.get_encrypted_attribute()
             r = requests.post(
-                    credential_url, 
+                    CREDENTIAL_URL, 
                     data=encode( (email, password, user_token) )
                 )
             cred_token  = decode(r.content)
@@ -43,11 +44,9 @@ def create_user(app):
             return redirect(url_for('home'))
         return render_template('credential.html',form=form)
 
-    @app.route('/register', methods = ['GET', 'POST'])    
-    def register():
+    @app.route('/show', methods = ['GET', 'POST'])    
+    def show():
         """
-            The page where the user registers a pseudonym for a specific
-            service
         """
         try:
             cred, keys, values, timeout  = cs.get_credential_token()
@@ -58,14 +57,19 @@ def create_user(app):
         form = RegisterForm(request.form)
         if request.method == 'POST' and form.validate():
             service_name = form.service_name.data
-            show_proof = cs.show(cred, service_name, keys, values, timeout)
+            show_proof = cs.show(service_name, keys, values, timeout)
+            """
             r = requests.post(
                     register_url,
                     data = encode(show_proof)
                 )
-            flash(r.text)
+            """
+            filename = 'show_{}'.format(service_name) 
+            with open(filename, 'wb+') as f:
+                f.write(encode(show_proof))
+            flash("Create show for {} at {}".format(service_name, filename))
             return redirect(url_for('home'))
-        return render_template('register.html',form=form)
+        return render_template('show.html',form=form)
 
 if __name__ == '__main__':
     import os
