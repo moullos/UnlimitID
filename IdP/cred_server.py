@@ -7,30 +7,31 @@ from petlib.pack import encode, decode
 from petlib.bn import Bn
 
 class CredentialServer():
-    def __init__(self):
+    def __init__(self, crypto_dir):
         
         """
             __init__ imports the long term required values from files
         """
         self.n = 4
+	self.crypto_dir = crypto_dir
         try:
-            with open('params', 'rb') as f: 
+            with open(self.crypto_dir + '/params', 'rb') as f: 
                 self.params = decode(f.read())
         except IOError:
             self.params = cred_setup()
-            with open('params', 'wb+') as f:
+            with open(self.crypto_dir +'/params', 'wb+') as f:
                 f.write( encode(self.params) )
         try:
-            with open('isec', 'rb') as f:
+            with open(self.crypto_dir + '/isec', 'rb') as f:
                 self.isec = decode(f.read())
-            with open('ipub', 'rb') as f: 
+            with open(self.crypto_dir + '/ipub', 'rb') as f: 
                 self.ipub = decode(f.read())
         except IOError:
             self.ipub, self.isec = cred_CredKeyge(self.params, self.n)
-            with open('isec', 'wb+') as f:
+            with open(self.crypto_dir + '/isec', 'wb+') as f:
                 f.write( encode(self.isec) )
             
-            with open('ipub', 'wb+') as f:
+            with open(self.crypto_dir + '/ipub', 'wb+') as f:
                 f.write( encode(self.ipub) )
 
 
