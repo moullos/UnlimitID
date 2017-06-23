@@ -1,18 +1,19 @@
 # Flask related imports
-from flask import g, render_template, request, Response, jsonify, make_response ,session
+from flask import g, render_template, request, jsonify, make_response ,session
 from flask_oauthlib.provider import OAuth2Provider
 from flask_oauthlib.contrib.oauth2 import bind_sqlalchemy
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask import Flask, flash, redirect, url_for
 
+import os
 # Timestamps
 from datetime import datetime, timedelta
 # Db objects
 from models import db, Client, User, Token, Grant, Pseudonym
 # Forms templates
-from forms import SignupForm, LoginForm
+from forms import SignupForm, LoginForm, AuthorizeForm
 # Hashes for storing passwords
-from werkzeug import generate_password_hash, check_password_hash
+from werkzeug import generate_password_hash, check_password_hash, secure_filename
 # CredentialServer provides amacs credential functionality
 from cred_server import CredentialServer
 from petlib.pack import decode, encode 
@@ -24,29 +25,16 @@ PSEUDONYM_ENTRY_LIFETIME = 300
 ANONYMOUS_KEYS = ['name', 'gender', 'zoneinfo', 'birthdate' ]
 # Credential Lifetime. Default is two weeks
 CREDENTIAL_LIFETIME = 1209600
+# Crypto URL
+CRYPTO_DIR = 'crypto'
+
+# TODO:
+# Fix signup form
+# Client signup
+# Fix Client model scopes
 
 def current_user():
     return g.user
-
-
-def cache_provider(app):
-    oauth = OAuth2Provider(app)
-
-    bind_sqlalchemy(oauth, db.session, user=User,
-                    token=Token, client=Client)
-
-    app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
-    bind_cache_grant(app, oauth, current_user)
-    return oauth
-
-
-def sqlalchemy_provider(app):
-    oauth = OAuth2Provider(app)
-
-    bind_sqlalchemy(oauth, db.session, user=User, token=Token,
-                    client=Client, grant=Grant, current_user=current_user)
-
-    return oauth
 
 
 def default_provider(app):
@@ -54,14 +42,17 @@ def default_provider(app):
 
     @oauth.clientgetter
     def get_client(client_id):
+        print 'ClientGetter'
         return Client.query.filter_by(client_id=client_id).first()
 
     @oauth.grantgetter
     def get_grant(client_id, code):
+        print 'GrantGetter'
         return Grant.query.filter_by(client_id=client_id, code=code).first()
 
     @oauth.tokengetter
     def get_token(access_token=None, refresh_token=None):
+        print 'TokenGetter'
         if access_token:
             return Token.query.filter_by(access_token=access_token).first()
         if refresh_token:
@@ -70,13 +61,14 @@ def default_provider(app):
 
     @oauth.grantsetter
     def set_grant(client_id, code, request, *args, **kwargs):
+        print 'GrantSetter'
         expires = datetime.utcnow() + timedelta(seconds=100)
         grant = Grant(
             client_id=client_id,
             code=code['code'],
             redirect_uri=request.redirect_uri,
             scope=' '.join(request.scopes),
-            user_id=g.user.id,
+            user_id = g.user.id,
             expires=expires
         )
         db.session.add(grant)
@@ -86,17 +78,13 @@ def default_provider(app):
     def set_token(token, request, *args, **kwargs):
         # In real project, a token is unique bound to user and client.
         # Which means, you don't need to create a token every time.
+        print 'TokenSetter'
         tok = Token(**token)
         tok.user_id = request.user.id
         tok.client_id = request.client.client_id
         db.session.add(tok)
         db.session.commit()
 
-    @oauth.usergetter
-    def get_user(username, password, *args, **kwargs):
-        # This is optional, if you don't need password credential
-        # there is no need to implement this method
-        return User.query.filter_by(name=username).first()
 
     return oauth
 
@@ -138,14 +126,20 @@ def create_server(app, oauth=None):
         oauth = default_provider(app)
 
     app = prepare_app(app)
-    cs = CredentialServer()
+    cs = CredentialServer(CRYPTO_DIR)
+
     @app.before_request
     def load_current_user():
-        if 'used_sub' in session:
-            user = User.query.filter_by(id=session['user_id']).first()
+        print 'LoadCurrentUser'
+        if 'pseudonym_id' in session:
+            print 'Session exists'
+            id = session['pseudonym_id']
+            pseudonym = Pseudonym.query.filter_by(id=id).first()
+            print pseudonym
         else: 
-            user = {}
-        g.user = user
+            print 'Session does not exists'
+            pseudonym = None
+        g.user = pseudonym
     
     @app.route('/client_signup')
     def client_signup(*args, **kwargs):
@@ -153,30 +147,7 @@ def create_server(app, oauth=None):
         A page for clients to signup to the IdP
         """
         return render_template('underConstruction.html')
-    
-    @app.route('/login', methods=['GET','POST'])
-    def login(*args, **kwargs):    
-        """
-        A page for the users to login
-        """
-        form = LoginForm(request.form)
-        try:
-            if request.method == 'POST' and form.validate():
-                email = form.email.data
-                password = form.password.data
-                user = User.query.filter_by(email=email).first()
-                if user != None and check_password_hash(user.pwdhash, password):
-                    session['logged_in'] = True
-                    session['user_id'] = user.id
-                    flash("Welcome {}".format(user.name))
-                    return redirect(url_for('home'))
-                else:
-                    flash("Wrong Credential")
-            return render_template('login.html', form=form)
-
-        except Exception as e:
-            print(str(e))
-            
+        
     @app.route('/signup', methods=['GET', 'POST'])
     def signup(*args, **kwargs):
         """
@@ -186,13 +157,13 @@ def create_server(app, oauth=None):
         try:
             form = SignupForm(request.form)
             if request.method == 'POST' and form.validate():           
-                name= form.username.data
+                name = form.username.data
                 given_name = form.firstname.data
                 family_name = form.lastname.data
                 email = form.email.data
                 gender = form.gender.data
                 zoneinfo = form.zoneinfo.data
-                birthdata = form.birthdate.data
+                birthdate = form.birthdate.data
                 password = form.password.data
             
                 user = User.query.filter_by(name=name).first()
@@ -208,7 +179,7 @@ def create_server(app, oauth=None):
                     else:    
                         # Add the user to the db
                         user = User(
-                            name = username, 
+                            name = name, 
                             given_name = given_name, 
                             family_name = family_name,
                             email = email, 
@@ -220,7 +191,7 @@ def create_server(app, oauth=None):
                         db.session.add(user)
                         db.session.commit()
                         flash("Thanks for signing up")
-                        return redirect(url_for('login'))
+                        return redirect(url_for('home'))
             return render_template('signup.html', form=form)
         
         except Exception as e:
@@ -255,59 +226,7 @@ def create_server(app, oauth=None):
         else:
             return "Invalid Credentials"
                 
-           
-    @app.route('/unlimitID/register', methods = ['POST'])
-    def register_pseudo(*args, **kwargs):
-        """
-        A page for a user to register a pseudonym for a particular RP
-        Essentially a NIZK proof is received from the client (Show() Protocol).
-        The IdP verifies the proof (ShowVerify()) and adds to its database the pseudonym along 
-        with the RP it is issued for, the keys with the respective attributes and
-        the exp time. Note that a user is not supposed to be logged in at this point
-        as that violates unlinkability between the pseudonyms and the users.
-        """
-        # TODO: Check if the pseudonym exists and update it. 
-        try:
-            creds, sig_o, sig_openID, Service_name, pseudonym, keys, values, timeout = decode(request.data)
-        except Exception as e:
-            print(str(e))
-            return "Decode failed"
-        
-        # 1. Check if the credential has not expired
-        if datetime.utcnow() < datetime.strptime( timeout, "%Y-%m-%dT%H:%M:%S.%f" ):
-            # 2. Check if the credential is valid
-            if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, pseudonym, keys, values, timeout): 
-                # 3. Check if the service name is valid
-                client = Client.query.filter_by(name=Service_name).first()
-                if client!= None:
-                    # 4. Create a pseudonym entry containing the clients scope.
-                    attr = dict(zip(keys,values))
-                    scopes = client.default_scopes
-                    k = []
-                    v = []
-                    for scope in scopes:
-                        if scope not in attr:
-                            return "Invalid Scope"
-                        k.append(scope)
-                        v.append(attr[scope])
-                    new_entry = Pseudonym(
-                                  pseudonym = pseudonym,
-                                  client_id = client.client_id, 
-                                  keys = k,
-                                  values = v,
-                                  timeout = timeout
-                              )
-                    db.session.add(new_entry)
-                    db.session.commit()
-                    return "Pseudonym for {} created successfully".format(Service_name)
-                
-                else:
-                    return "Client {} not known".format(Service_name)
-            else:
-                return "Credential not valid"
-        else:
-            return "Credential Expired"
-
+    
 
     @app.route('/')
     def index():
@@ -318,14 +237,15 @@ def create_server(app, oauth=None):
         """
         Server's initial page
         """
-        if g.user != {}:
-            flash('You are currently logged in as {}'.format(g.user.username))
+        if g.user != None:
+            flash('You are currently logged in as {}'.format(g.user._uid))
         #FIXME: Some hyperlinks in home.html would be appreciated
         return render_template('home.html')    
 
     @app.route('/oauth/authorize', methods=['GET', 'POST'])
     @oauth.authorize_handler
     def authorize(*args, **kwargs):
+        print 'Authorize'
         """
         The server's authorization endpoint
 
@@ -335,15 +255,12 @@ def create_server(app, oauth=None):
         which attributes of his (locally blinded) credential to 
         reveal to the RP. After the IdP validates the credential,
         a database record with the revealed attributes is created.
-        client_id: id of the client
-        scopes: a list of scope
-        state: state parameter
-        redirect_uri: redirect_uri parameter
-        response_type: response_type parameter
         """
-        # render a page for user to confirm the authorization
+        form = AuthorizeForm()
         if request.method == 'GET':
-            return render_template('confirm.html')
+            scopes = kwargs.get('scopes')
+            flash('The client is requesting access to {}'.format(','.join(scopes)))
+            return render_template('authorize.html', form=form)
         
         
         if request.method == 'HEAD':
@@ -352,16 +269,45 @@ def create_server(app, oauth=None):
             response = make_response('', 200)
             response.headers['X-Client-ID'] = kwargs.get('client_id')
             return response
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(name=username).first()
-        if user != None and check_password_hash(user.pwdhash, password):
-            g.user = user
-            return True
+
+        f = form.show.data
+        creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout = decode(f.read())
+        f.close()
+        client = Client.query.filter_by(name = Service_name).first()
+        if client != None:
+            if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout):
+                attr = dict(zip(keys,values))
+                scopes = client.default_scopes
+                k = []
+                v = []
+                for scope in scopes:
+                    if scope not in attr:
+                       return "Attribute {} is not part of the credential provided".format(scope)
+                    k.append(scope)
+                    v.append(attr[scope])
+                pseudonym = Pseudonym.query.filter_by(_uid = str(uid)).first()
+                if pseudonym != None:
+                    db.session.delete(pseudonym)
+                    db.session.commit()
+                # 5. Create a pseudonym entry containing the clients scope.
+                new_entry = Pseudonym(
+                                 uid = uid,
+                                 client_id = client.client_id,
+                                 keys = k,
+                                 values = v,
+                                 timeout = timeout
+                            )
+                db.session.add(new_entry)
+                db.session.commit()
+                print new_entry.id
+                session['pseudonym_id'] = new_entry.id
+                return True
+            else:
+                return "Credential verification failed"
         else:
-            return False 
-
-
+            return "Unknown Client"
+        return False
+        
     @app.route('/oauth/token', methods=['POST', 'GET'])
     @oauth.token_handler
     def access_token():
@@ -377,11 +323,12 @@ def create_server(app, oauth=None):
     def revoke_token():
         pass
 
-    @app.route('/api/email')
-    @oauth.require_oauth('email')
+    @app.route('/api/name')
+    @oauth.require_oauth('name')
     def email_api():
         oauth = request.oauth
-        return jsonify(email=oauth.user.email, username=oauth.user.name)
+        attr = oauth.user.attr
+        return jsonify(name=attr['name'])
 
     @app.route('/api/client')
     @oauth.require_oauth()
