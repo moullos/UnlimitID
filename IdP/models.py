@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug import generate_password_hash, check_password_hash
 from petlib.ec import EcPt
 from binascii import unhexlify
+
 db = SQLAlchemy()
 
 class User(db.Model):
@@ -42,8 +43,6 @@ class User(db.Model):
         return result
 
 class Client(db.Model):
-    # id = db.Column(db.Integer, primary_key=True)
-    # human readable name
     name = db.Column(db.String(40), nullable=False)
     client_id = db.Column(db.String(40), primary_key=True,
                             nullable=False)
@@ -144,7 +143,6 @@ class Token(db.Model):
 
 class Pseudonym(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # The client the pseudonym is giving access to
     client_id = db.Column(
         db.String(40), db.ForeignKey('client.client_id', ondelete='CASCADE'),
         nullable=False,
