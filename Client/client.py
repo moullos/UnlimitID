@@ -8,7 +8,7 @@ def create_client(app):
         'dev',
         consumer_key='dev',
         consumer_secret='dev',
-        request_token_params={'scope': 'name'},
+        request_token_params={'scope': 'name gender'},
         base_url='http://127.0.0.1:5000/api/',
         request_token_url=None,
         access_token_method='POST',
@@ -36,6 +36,12 @@ def create_client(app):
     def logout():
         session.pop('dev_token', None)
         return redirect(url_for('index'))
+    
+    @app.route('/get/<attr>')
+    def get_attr(attr):
+        ret = remote.get(attr)
+        return jsonify(ret.data)
+
 
     @app.route('/authorized')
     def authorized():
@@ -64,18 +70,11 @@ def create_client(app):
             return ret.raw_data, ret.status
         return ret.raw_data
 
-    @app.route('/method/<name>')
-    def method(name):
-        func = getattr(remote, name)
-        ret = func('method')
-        return ret.raw_data
-
     @remote.tokengetter
     def get_oauth_token():
         return session.get('dev_token')
 
     return remote
-
 
 if __name__ == '__main__':
     import os
