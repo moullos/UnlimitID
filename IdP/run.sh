@@ -1,2 +1,2 @@
 #!/bin/sh
-python ./server.py
+python IdP.py
