@@ -1,11 +1,9 @@
 # Flask related imports
-from flask import g, render_template, request, jsonify, make_response ,session
+from flask import g, render_template, request, jsonify, make_response ,session, Flask, flash, redirect, url_for
 from flask_oauthlib.provider import OAuth2Provider
-from flask_oauthlib.contrib.oauth2 import bind_sqlalchemy
-from flask_oauthlib.contrib.oauth2 import bind_cache_grant
-from flask import Flask, flash, redirect, url_for
 
-import os
+import sys
+sys.path += ['amacscreds']
 # Timestamps
 from datetime import datetime, timedelta
 # Db objects
@@ -13,7 +11,7 @@ from models import db, Client, User, Token, Grant, Pseudonym
 # Forms templates
 from forms import SignupForm, LoginForm, AuthorizeForm
 # Hashes for storing passwords
-from werkzeug import generate_password_hash, check_password_hash, secure_filename
+from werkzeug import generate_password_hash, check_password_hash
 # CredentialServer provides amacs credential functionality
 from cred_server import CredentialServer
 from petlib.pack import decode, encode 
@@ -29,9 +27,8 @@ CREDENTIAL_LIFETIME = 1209600
 CRYPTO_DIR = 'crypto'
 
 # TODO:
-# Fix signup form
 # Client signup
-# Fix Client model scopes
+# Config file
 
 def current_user():
     return g.user
@@ -42,17 +39,14 @@ def default_provider(app):
 
     @oauth.clientgetter
     def get_client(client_id):
-        print 'ClientGetter'
         return Client.query.filter_by(client_id=client_id).first()
 
     @oauth.grantgetter
     def get_grant(client_id, code):
-        print 'GrantGetter'
         return Grant.query.filter_by(client_id=client_id, code=code).first()
 
     @oauth.tokengetter
     def get_token(access_token=None, refresh_token=None):
-        print 'TokenGetter'
         if access_token:
             return Token.query.filter_by(access_token=access_token).first()
         if refresh_token:
@@ -61,24 +55,20 @@ def default_provider(app):
 
     @oauth.grantsetter
     def set_grant(client_id, code, request, *args, **kwargs):
-        print 'GrantSetter'
         expires = datetime.utcnow() + timedelta(seconds=100)
         grant = Grant(
-            client_id=client_id,
+            client_id = client_id,
             code=code['code'],
-            redirect_uri=request.redirect_uri,
+            redirect_uri = request.redirect_uri,
             scope=' '.join(request.scopes),
             user_id = g.user.id,
-            expires=expires
+            expires = expires
         )
         db.session.add(grant)
         db.session.commit()
 
     @oauth.tokensetter
     def set_token(token, request, *args, **kwargs):
-        # In real project, a token is unique bound to user and client.
-        # Which means, you don't need to create a token every time.
-        print 'TokenSetter'
         tok = Token(**token)
         tok.user_id = request.user.id
         tok.client_id = request.client.client_id
@@ -130,24 +120,13 @@ def create_server(app, oauth=None):
 
     @app.before_request
     def load_current_user():
-        print 'LoadCurrentUser'
         if 'pseudonym_id' in session:
-            print 'Session exists'
             id = session['pseudonym_id']
             pseudonym = Pseudonym.query.filter_by(id=id).first()
-            print pseudonym
         else: 
-            print 'Session does not exists'
             pseudonym = None
         g.user = pseudonym
     
-    @app.route('/client_signup')
-    def client_signup(*args, **kwargs):
-        """
-        A page for clients to signup to the IdP
-        """
-        return render_template('underConstruction.html')
-        
     @app.route('/signup', methods=['GET', 'POST'])
     def signup(*args, **kwargs):
         """
@@ -239,18 +218,14 @@ def create_server(app, oauth=None):
         """
         if g.user != None:
             flash('You are currently logged in as {}'.format(g.user._uid))
-        #FIXME: Some hyperlinks in home.html would be appreciated
         return render_template('home.html')    
 
     @app.route('/oauth/authorize', methods=['GET', 'POST'])
     @oauth.authorize_handler
     def authorize(*args, **kwargs):
-        print 'Authorize'
         """
         The server's authorization endpoint
 
-        For now this function implements a typical authentication for
-        the user in order for the access code to be generated. 
         In UnlimitID, this function should ask the user to select 
         which attributes of his (locally blinded) credential to 
         reveal to the RP. After the IdP validates the credential,
@@ -299,7 +274,6 @@ def create_server(app, oauth=None):
                             )
                 db.session.add(new_entry)
                 db.session.commit()
-                print new_entry.id
                 session['pseudonym_id'] = new_entry.id
                 return True
             else:
@@ -325,28 +299,24 @@ def create_server(app, oauth=None):
 
     @app.route('/api/name')
     @oauth.require_oauth('name')
-    def email_api():
+    def name_api():
         oauth = request.oauth
         attr = oauth.user.attr
         return jsonify(name=attr['name'])
+    
+    @app.route('/api/gender')
+    @oauth.require_oauth('gender')
+    def gender_api():
+        oauth = request.oauth
+        attr = oauth.user.attr
+        return jsonify(gender=attr['gender'])
 
     @app.route('/api/client')
     @oauth.require_oauth()
     def client_api():
         oauth = request.oauth
         return jsonify(client=oauth.client.name)
-
-    @app.route('/api/address/<city>')
-    @oauth.require_oauth('address')
-    def address_api(city):
-        oauth = request.oauth
-        return jsonify(address=city, username=oauth.user.name)
-
-    @app.route('/api/method', methods=['GET', 'POST', 'PUT', 'DELETE'])
-    @oauth.require_oauth()
-    def method_api():
-        return jsonify(method=request.method)
-
+    
     @oauth.invalid_response
     def require_oauth_invalid(req):
         return jsonify(message=req.error_message), 401

@@ -1,6 +1,3 @@
-import sys
-sys.path += ["amacscreds"]
-
 from amacscreds import cred_setup, cred_CredKeyge, cred_UserKeyge, cred_secret_issue_user, cred_secret_issue, cred_secret_issue_user_decrypt, cred_show, cred_show_check, cred_secret_issue_user_check
 from genzkp import *
 from petlib.pack import encode, decode
