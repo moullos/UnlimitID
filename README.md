@@ -8,6 +8,13 @@ identities and requires no change in the deployed code of relying parties, only 
 Full version of the paper published at WPES 2016 is available at http://www.cs.ucl.ac.uk/staff/M.Isaakidis/p/UnlimitID_WPES16.pdf
 
 
-#### Structure of the repository
-This repository includes:
+### Features
+
+IdP implements an UnlimitID identity provider build upon flask-oauthlib_
+
+.. _flask-oauthlib: https://github.com/lepture/flask-oauthlib
+
+User provides the out-of-band functionality preluding a typical UnlimitID flow.
+
+
 
