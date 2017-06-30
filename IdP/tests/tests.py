@@ -1,11 +1,11 @@
 import os
 import unittest
-from IdP import app, db, credentialserver as IdP_cs
+from IdP import app, db, credentialServer as IdP_cs
 from IdP.models import User, Client
 from IdP.amacscreds.cred_user import CredentialUser
 from petlib.pack import encode, decode
 from cStringIO import StringIO
-from datetime import datetime
+from datetime import date, timedelta
 
 class IdPTestCase(unittest.TestCase):
 
@@ -16,6 +16,7 @@ class IdPTestCase(unittest.TestCase):
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
         self.app = app.test_client()
         self.IdP_cs = IdP_cs
+        self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name'
         self.user_cs = CredentialUser('user_crypto', params = IdP_cs.params, ipub = IdP_cs.ipub)
         db.create_all()
 
@@ -215,7 +216,7 @@ class IdPTestCase(unittest.TestCase):
    
     def test_authorize_post_invalid_service_name(self):
         show_proof = self.prepare_authorize('Invalid_service','Service_name', 'test')
-        rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(show_proof)), 'show')})
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(show_proof)), 'show')})
         assert b'Invalid Service Name' in rv.data
   
     def test_authorize_post_invalid_uid(self):
@@ -224,7 +225,7 @@ class IdPTestCase(unittest.TestCase):
         creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout = show_proof
         dummy_uid = o.random()
         dummy_show_proof = creds, sig_o, sig_openID, Service_name, dummy_uid , keys, values, timeout 
-        rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'EC+exception' in rv.data
 
     def test_authorize_post_invalid_keys(self):
@@ -232,7 +233,7 @@ class IdPTestCase(unittest.TestCase):
         creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout = show_proof
         dummy_keys = ['dummy', 'keys', 'dummy', 'keys']
         dummy_show_proof = creds, sig_o, sig_openID, Service_name, uid , dummy_keys, values, timeout 
-        rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'Credential verification failed' in rv.data
     
     def test_authorize_post_invalid_values(self):
@@ -240,17 +241,37 @@ class IdPTestCase(unittest.TestCase):
         creds, sig_o, sig_openID, service_name, uid, keys, values, timeout = show_proof
         dummy_values = ['dummy', 'values', 'dummy', 'values']
         dummy_show_proof = creds, sig_o, sig_openID, service_name, uid , keys, dummy_values, timeout 
-        rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'Credential verification failed' in rv.data
 
     def test_authorize_post_invalid_timeout(self):
         show_proof = self.prepare_authorize('Service_name','Service_name', 'test')
         creds, sig_o, sig_openID, service_name, uid, keys, values, timeout = show_proof
-        dummy_timeout = datetime.utcnow().isoformat()
+        dummy_timeout = date.today().isoformat()
         dummy_show_proof = creds, sig_o, sig_openID, service_name, uid , keys, values, dummy_timeout 
-        rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'Credential verification failed' in rv.data
 
+    def get_expired_credential(self, proof_service_name, client_service_name, client_id ):
+        self.add_user('test','test@unlimitID.com')
+        user_token = self.user_cs.get_encrypted_attribute()
+        email = 'test@unlimitID.com'
+        password = 'pass'
+        user = User.query.filter_by(name = 'test').first()
+        values = user.get_values_by_keys(['name'])
+        timeout_date = date.today() - timedelta(days = 14)
+        timeout = timeout_date.isoformat()
+        print timeout
+        cred_issued = IdP_cs.issue_credential(user_token,['name'], values, timeout )
+        cred_token = (cred_issued, ['name'], values, timeout)
+        self.user_cs.issue_verify( cred_token, user_token)
+        cred, keys, values, timeout  = self.user_cs.get_credential_token()
+        self.add_client(client_service_name, client_id)
+        return self.user_cs.show(proof_service_name, keys, values, timeout)
 
+    def test_authorized_post_expired_credential(self):
+        show_proof = self.get_expired_credential('Service_name', 'Service_name', 'test')
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(show_proof)), 'show')})
+        assert b'Credential expired' in rv.data
 if __name__ == '__main__':
     unittest.main()

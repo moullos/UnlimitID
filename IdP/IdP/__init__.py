@@ -1,13 +1,11 @@
 # Flask related imports
 from flask import Flask, session
 from flask_oauthlib.provider import OAuth2Provider
-
-# Timestamps
 from datetime import datetime, timedelta
 from models import User, Client, Pseudonym, Token, Grant, db
 from werkzeug import generate_password_hash, check_password_hash
-# CredentialServer provides amacs credential functionality
 from amacscreds.cred_server import CredentialServer
+import os
 from petlib.pack import decode, encode 
 
 
@@ -104,12 +102,11 @@ def prepare_app(app):
 def create_server(app, oauth=None):
     if not oauth:
         oauth = default_provider(app)
-
-    cs = CredentialServer(CRYPTO_DIR)   
+    cs = CredentialServer(os.path.join( app.instance_path, CRYPTO_DIR))
     return app, oauth, cs
 
 app.config.update({
-    'SQLALCHEMY_DATABASE_URI': 'sqlite:///test.sqlite'
+    'SQLALCHEMY_DATABASE_URI': 'sqlite:///{}'.format(os.path.join(app.instance_path,'UnlimitID.db'))
 })
 db.init_app(app)
 db.app = app
@@ -117,5 +114,5 @@ db.create_all()
 #app = prepare_app(app)
 app.debug = True
 app.secret_key = 'development'
-app, oauth, credentialserver = create_server(app)
+app, oauth, credentialServer = create_server(app)
 import IdP.views

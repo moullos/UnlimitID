@@ -175,7 +175,7 @@ class Pseudonym(db.Model):
 
     @property
     def uid(self):
-        return EcPt.from_binary(unhexlify(self.uid))
+        return EcPt.from_binary(unhexlify(self._uid))
 
     @property
     def keys(self):

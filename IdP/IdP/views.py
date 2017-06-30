@@ -1,11 +1,11 @@
 from IdP import app, oauth, db
-from IdP import credentialserver as cs
+from IdP import credentialServer as cs
 from models import User, Client, Pseudonym, Token, Grant
 from forms import SignupForm, LoginForm, AuthorizeForm, ClientForm
 from flask import redirect, url_for, render_template, flash, session, jsonify, request
-from config import ANONYMOUS_KEYS, PSEUDONYM_ENTRY_LIFETIME, CREDENTIAL_LIFETIME
+from config import ANONYMOUS_KEYS, CREDENTIAL_LIFETIME
 from petlib.pack import encode, decode
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup(*args, **kwargs):
@@ -107,7 +107,7 @@ def credential(*args, **kwargs):
     if user != None and user.check_password(password):
         # Setting values, keys and timeout for the issued credential
         values = user.get_values_by_keys(ANONYMOUS_KEYS)
-        timeout_date = datetime.utcnow() + timedelta(seconds=CREDENTIAL_LIFETIME)
+        timeout_date = date.today() + timedelta(days=CREDENTIAL_LIFETIME)
         timeout = timeout_date.isoformat()
         cred_issued = cs.issue_credential(user_token, ANONYMOUS_KEYS, values, timeout)
         return encode( (cred_issued, ANONYMOUS_KEYS, values, timeout) )
@@ -146,42 +146,47 @@ def authorize(*args, **kwargs):
         return render_template('authorize.html', form=form)
     
     if request.method == 'POST':
-      f = form.show.data
-      creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout = decode(f.read())
-      f.close()
-      client = Client.query.filter_by(name = Service_name).first()
-      if client != None:
-          if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout):
-              attr = dict(zip(keys,values))
-              scopes = client.default_scopes
-              k = []
-              v = []
-              for scope in scopes:
-                  if scope not in attr:
-                     return "Attribute {} is not part of the credential provided".format(scope)
-                  k.append(scope)
-                  v.append(attr[scope])
-              pseudonym = Pseudonym.query.filter_by(_uid = str(uid)).first()
-              if pseudonym != None:
-                  db.session.delete(pseudonym)
-                  db.session.commit()
-              # 5. Create a pseudonym entry containing the clients scope.
-              new_entry = Pseudonym(
-                               uid = uid,
-                               client_id = client.client_id,
-                               keys = k,
-                               values = v,
-                               timeout = timeout
-                          )
-              db.session.add(new_entry)
-              db.session.commit()
-              session['pseudonym_id'] = new_entry.id
-              return True
-          else:
-              return "Credential verification failed"
-      else:
-          return "Invalid Service Name"
-      return False
+        f = form.show.data
+        creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout = decode(f.read())
+        f.close()
+        # Checking whether the service exists
+        client = Client.query.filter_by(name = Service_name).first()
+        if client != None:
+            # Checking if the credential is valid
+            if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout):
+                # Checking if the credential expired
+                if datetime.strptime(timeout,'%Y-%m-%d').date() >= date.today():
+                    attr = dict(zip(keys,values))
+                    scopes = client.default_scopes
+                    k = []
+                    v = []
+                    for scope in scopes:
+                        if scope not in attr:
+                           return "Attribute {} is not part of the credential provided".format(scope)
+                        k.append(scope)
+                        v.append(attr[scope])
+                    pseudonym = Pseudonym.query.filter_by(_uid = str(uid)).first()
+                    if pseudonym != None:
+                        db.session.delete(pseudonym)
+                        db.session.commit()
+                    new_entry = Pseudonym(
+                                     uid = uid,
+                                     client_id = client.client_id,
+                                     keys = k,
+                                     values = v,
+                                     timeout = timeout
+                                )
+                    db.session.add(new_entry)
+                    db.session.commit()
+                    session['pseudonym_id'] = new_entry.id
+                    return True
+                else:
+                    return "Credential expired"
+            else:
+                return "Credential verification failed"
+        else:
+            return "Invalid Service Name"
+    return False
     
 @app.route('/oauth/token', methods=['POST', 'GET'])
 @oauth.token_handler
