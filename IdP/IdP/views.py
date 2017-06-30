@@ -13,7 +13,6 @@ def signup(*args, **kwargs):
     A page with a form for users to signup to the IdP
     Get the data from the form and store it in the database
     """
-    #try:
     form = SignupForm(request.form)
     if request.method == 'POST' and form.validate():           
         name = form.username.data
@@ -52,9 +51,6 @@ def signup(*args, **kwargs):
                 flash("Thanks for signing up")
                 return redirect(url_for('home'))
     return render_template('signup.html', form=form)
-    
-    #except Exception as e:
-    #   return(str(e))
 
 @app.route('/client_signup', methods = ['GET', 'POST'])
 def client_signup():
@@ -105,8 +101,7 @@ def credential(*args, **kwargs):
     try:
         email ,password, user_token  = decode(request.data)
     except Exception as e:
-        print(str(e))
-        return "Decoding failed"
+        return "Invalid Data in Request"
     #Checking the user's email and password
     user = User.query.filter_by(email=email.lower()).first()
     if user != None and user.check_password(password):
@@ -150,13 +145,6 @@ def authorize(*args, **kwargs):
         flash('The client is requesting access to {}'.format(','.join(scopes)))
         return render_template('authorize.html', form=form)
     
-    
-    if request.method == 'HEAD':
-        # if HEAD is supported properly, request parameters like
-        # client_id should be validated the same way as for 'GET'
-        response = make_response('', 200)
-        response.headers['X-Client-ID'] = kwargs.get('client_id')
-        return response
     if request.method == 'POST':
       f = form.show.data
       creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout = decode(f.read())
@@ -187,20 +175,17 @@ def authorize(*args, **kwargs):
                           )
               db.session.add(new_entry)
               db.session.commit()
-              print new_entry.id
               session['pseudonym_id'] = new_entry.id
-              print "OK"
               return True
           else:
               return "Credential verification failed"
       else:
-          return "Unknown Client"
+          return "Invalid Service Name"
       return False
     
 @app.route('/oauth/token', methods=['POST', 'GET'])
 @oauth.token_handler
 def access_token():
-    print "Access Token"
     """
     The server's access token endpoint. Returning {} makes the 
     server to just return the default access token. Anything else 
