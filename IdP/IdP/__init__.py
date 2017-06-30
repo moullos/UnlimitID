@@ -30,17 +30,14 @@ def default_provider(app):
 
     @oauth.clientgetter
     def get_client(client_id):
-        print "Client Getter"
         return Client.query.filter_by(client_id=client_id).first()
 
     @oauth.grantgetter
     def get_grant(client_id, code):
-        print "Grant Getter"
         return Grant.query.filter_by(client_id=client_id, code=code).first()
 
     @oauth.tokengetter
     def get_token(access_token=None, refresh_token=None):
-        print "Token Getter"
         if access_token:
             return Token.query.filter_by(access_token=access_token).first()
         if refresh_token:
@@ -49,9 +46,7 @@ def default_provider(app):
 
     @oauth.grantsetter
     def set_grant(client_id, code, request, *args, **kwargs):
-        print "Grant Setter"
         pseudonym = load_current_pseudonym()
-        print pseudonym.id
         expires = datetime.utcnow() + timedelta(seconds=100)
         grant = Grant(
             client_id = client_id,
@@ -66,9 +61,7 @@ def default_provider(app):
 
     @oauth.tokensetter
     def set_token(token, request, *args, **kwargs):
-        print "Token Setter"
         tok = Token(**token)
-        print request.user.id
         tok.user_id = request.user.id
         tok.client_id = request.client.client_id
         db.session.add(tok)
@@ -86,7 +79,7 @@ def prepare_app(app):
             'http://localhost/authorized'
         ),
         client_type = 'confidential',
-        _default_scope = 'name gender'
+        default_scope = ['name', 'gender']
     )
     user = User(
                 name='admin', 
@@ -112,8 +105,7 @@ def create_server(app, oauth=None):
     if not oauth:
         oauth = default_provider(app)
 
-    cs = CredentialServer(CRYPTO_DIR)
-        
+    cs = CredentialServer(CRYPTO_DIR)   
     return app, oauth, cs
 
 app.config.update({
@@ -122,6 +114,7 @@ app.config.update({
 db.init_app(app)
 db.app = app
 db.create_all()
+#app = prepare_app(app)
 app.debug = True
 app.secret_key = 'development'
 app, oauth, credentialserver = create_server(app)
