@@ -1,6 +1,6 @@
 # General imports
 import sys
-
+import os 
 # Crypto imports
 from petlib.pack import encode, decode
 from petlib.bn import Bn
@@ -19,6 +19,8 @@ class CredentialUser():
         If any of the client's public values are missing, they are created.
         """ 
         self.crypto_dir = crypto_dir
+        if not os.path.exists(crypto_dir):
+            os.makedirs(crypto_dir)
         import requests
         
         if params != None and ipub != None:

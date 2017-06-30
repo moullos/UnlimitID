@@ -2,6 +2,7 @@ from amacscreds import cred_setup, cred_CredKeyge, cred_UserKeyge, cred_secret_i
 from genzkp import *
 from petlib.pack import encode, decode
 from petlib.bn import Bn
+import os
 
 class CredentialServer():
     def __init__(self, crypto_dir):
@@ -10,7 +11,9 @@ class CredentialServer():
             __init__ imports the long term required values from files
         """
         self.n = 4
-	self.crypto_dir = crypto_dir
+        self.crypto_dir = crypto_dir
+        if not os.path.exists(crypto_dir):
+            os.makedirs(crypto_dir)
         try:
             with open(self.crypto_dir + '/params', 'rb') as f: 
                 self.params = decode(f.read())
