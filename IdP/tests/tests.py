@@ -16,7 +16,6 @@ class IdPTestCase(unittest.TestCase):
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
         self.app = app.test_client()
         self.IdP_cs = IdP_cs
-        print IdP_cs.ipub
         self.user_cs = CredentialUser('user_crypto', params = IdP_cs.params, ipub = IdP_cs.ipub)
         db.create_all()
 
@@ -66,7 +65,6 @@ class IdPTestCase(unittest.TestCase):
     def test_user_signup_same_name(self):
         self.add_user('admin','admin@test.com')
         rv = self.user_signup('admin','test@test.com')
-        print rv.data
         assert b'Username already exists' in rv.data 
         assert rv.status_code == 200
 
@@ -106,7 +104,6 @@ class IdPTestCase(unittest.TestCase):
 
     def test_client_signup(self):
         rv = self.client_signup('test','test')
-        print rv.data
         assert b'Client Added Successfully' in rv.data
         assert rv.status_code == 200
 
@@ -237,20 +234,20 @@ class IdPTestCase(unittest.TestCase):
         dummy_show_proof = creds, sig_o, sig_openID, Service_name, uid , dummy_keys, values, timeout 
         rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'Credential verification failed' in rv.data
-
+    
     def test_authorize_post_invalid_values(self):
-        show_proof = self.prepare_authorize('service_name','service_name', 'test')
-        creds, sig_o, sig_openid, service_name, uid, keys, values, timeout = show_proof
+        show_proof = self.prepare_authorize('Service_name','Service_name', 'test')
+        creds, sig_o, sig_openID, service_name, uid, keys, values, timeout = show_proof
         dummy_values = ['dummy', 'values', 'dummy', 'values']
-        dummy_show_proof = creds, sig_o, sig_openid, service_name, uid , keys, dummy_values, timeout 
+        dummy_show_proof = creds, sig_o, sig_openID, service_name, uid , keys, dummy_values, timeout 
         rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'Credential verification failed' in rv.data
 
     def test_authorize_post_invalid_timeout(self):
-        show_proof = self.prepare_authorize('service_name','service_name', 'test')
-        creds, sig_o, sig_openid, service_name, uid, keys, values, timeout = show_proof
+        show_proof = self.prepare_authorize('Service_name','Service_name', 'test')
+        creds, sig_o, sig_openID, service_name, uid, keys, values, timeout = show_proof
         dummy_timeout = datetime.utcnow().isoformat()
-        dummy_show_proof = creds, sig_o, sig_openid, service_name, uid , keys, values, dummy_timeout 
+        dummy_show_proof = creds, sig_o, sig_openID, service_name, uid , keys, values, dummy_timeout 
         rv = self.app.post('/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name',data = {'show' : (StringIO(encode(dummy_show_proof)), 'show')})
         assert b'Credential verification failed' in rv.data
 
