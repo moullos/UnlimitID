@@ -1,11 +1,12 @@
 from IdP import app, oauth, db
 from IdP import credentialServer as cs
-from models import User, Client, Pseudonym, Token, Grant
+from models import User, Client, Pseudonym, Token, Grant, Credential
 from forms import SignupForm, LoginForm, AuthorizeForm, ClientForm
 from flask import redirect, url_for, render_template, flash, session, jsonify, request
 from config import ANONYMOUS_KEYS, CREDENTIAL_LIFETIME
 from petlib.pack import encode, decode
 from datetime import date, datetime, timedelta
+from binascii import hexlify
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup(*args, **kwargs):
@@ -105,11 +106,28 @@ def credential(*args, **kwargs):
     #Checking the user's email and password
     user = User.query.filter_by(email=email.lower()).first()
     if user != None and user.check_password(password):
+        # Checking if a valid credential already exists
+        cred = Credential.query.filter_by(user_id = user.id).first()
+        if cred != None:
+            if datetime.strptime(cred.timeout, "%Y-%m-%d").date() - date.today() >= timedelta(days=2):
+                # if the credential expires in more than 2 days return the existing credential
+                return encode( (cred.credential_issued, cred.keys, cred.values, cred.timeout))
+            else:
+                # if the credential expires in less that 2 days return a new credential
+                db.session.delete(cred)
         # Setting values, keys and timeout for the issued credential
         values = user.get_values_by_keys(ANONYMOUS_KEYS)
         timeout_date = date.today() + timedelta(days=CREDENTIAL_LIFETIME)
         timeout = timeout_date.isoformat()
         cred_issued = cs.issue_credential(user_token, ANONYMOUS_KEYS, values, timeout)
+        cred = Credential(
+                    user_id = user.id, 
+                    keys = ANONYMOUS_KEYS, 
+                    values = values,
+                    timeout = timeout,
+                    credential_issued = cred_issued)
+        db.session.add(cred)
+        db.session.commit()
         return encode( (cred_issued, ANONYMOUS_KEYS, values, timeout) )
     else:
         return "Invalid email or password"
@@ -155,7 +173,7 @@ def authorize(*args, **kwargs):
             # Checking if the credential is valid
             if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout):
                 # Checking if the credential expired
-                if datetime.strptime(timeout,'%Y-%m-%d').date() >= date.today():
+                if datetime.strptime(timeout,'%Y-%m-%d').date()  >= date.today():
                     attr = dict(zip(keys,values))
                     scopes = client.default_scopes
                     k = []
