@@ -1,7 +1,7 @@
 import os
 import unittest
 from IdP import app, db, credentialServer as IdP_cs
-from IdP.models import User, Client
+from IdP.models import User, Client, Credential
 from IdP.amacscreds.cred_user import CredentialUser
 from petlib.pack import encode, decode
 from cStringIO import StringIO
@@ -195,6 +195,69 @@ class IdPTestCase(unittest.TestCase):
         except:
             raised = True
         assert raised == False
+    
+    def test_credential_post_already_existing_cred(self):
+        # add a credential
+        self.add_user('test', 'test@unlimitid.com')
+        user_token = self.user_cs.get_encrypted_attribute()
+        rv = self.app.post('unlimitID/credential', data = encode ((
+                                                            'test@unlimitid.com',
+                                                            'pass',
+                                                            user_token
+                                                        ))
+                                                    )
+        cred_token1 = decode(rv.data)
+        self.user_cs.issue_verify(cred_token1, user_token)
+        rv = self.app.post('unlimitID/credential', data = encode ((
+                                                            'test@unlimitid.com',
+                                                            'pass',
+                                                            user_token
+                                                        ))
+                                                    )
+        cred_token2 = decode(rv.data)
+        self.user_cs.issue_verify(cred_token2, user_token)
+        assert cred_token1 == cred_token2
+
+    def add_credential(self, timeout_date = None ):
+        if timeout_date == None:
+            timeout_date = date.today() + timedelta(days=14)
+        self.add_user('test','test@unlimitID.com')
+        user_token = self.user_cs.get_encrypted_attribute()
+        password = 'pass'
+        email = 'test@unlimitID.com'
+        user = User.query.filter_by(name = 'test').first()
+        values = user.get_values_by_keys(['name'])
+        timeout = timeout_date.isoformat()
+        cred_issued = IdP_cs.issue_credential(user_token,['name'], values, timeout)
+        cred_token = (cred_issued, ['name'], values, timeout)
+        self.user_cs.issue_verify( cred_token, user_token)
+        cred = Credential(
+                    user_id = user.id,
+                    keys = ['name'],
+                    values = values,
+                    timeout = timeout,
+                    credential_issued = cred_issued)
+        db.session.add(cred)
+        db.session.commit()
+        return cred_token
+    
+        
+ 
+    def test_credential_post_refresh_period_cred(self):
+        # add a credential
+        timeout_date = date.today() - timedelta( days = 13)
+        cred_token_old = self.add_credential(timeout_date)
+        user_token = self.user_cs.get_user_token()
+        rv = self.app.post('unlimitID/credential', data = encode ((
+                                                            'test@unlimitid.com',
+                                                            'pass',
+                                                            user_token
+                                                        ))
+                                                    )
+        cred_token_new = decode(rv.data)
+        self.user_cs.issue_verify(cred_token_new, user_token)
+        assert cred_token_new != cred_token_old
+    
         
    
     ## / ##
@@ -261,7 +324,6 @@ class IdPTestCase(unittest.TestCase):
         values = user.get_values_by_keys(['name'])
         timeout_date = date.today() - timedelta(days = 14)
         timeout = timeout_date.isoformat()
-        print timeout
         cred_issued = IdP_cs.issue_credential(user_token,['name'], values, timeout )
         cred_token = (cred_issued, ['name'], values, timeout)
         self.user_cs.issue_verify( cred_token, user_token)
