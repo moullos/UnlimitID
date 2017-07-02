@@ -3,7 +3,8 @@ from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from werkzeug import generate_password_hash, check_password_hash
 from petlib.ec import EcPt
-from binascii import unhexlify
+from petlib.pack import encode, decode
+from binascii import hexlify, unhexlify
 
 db = SQLAlchemy()
 
@@ -159,6 +160,7 @@ class Pseudonym(db.Model):
     _uid = db.Column(db.String(70), nullable=False, unique=True)
     _keys = db.Column(db.String(255), nullable=False)
     _values = db.Column(db.String(255), nullable=False)
+    timeout = db.Column(db.String(12), nullable=False)
     def __init__(self, **kwargs):
         
         uid = kwargs.pop('uid')
@@ -187,3 +189,40 @@ class Pseudonym(db.Model):
     @property
     def attr(self):
         return(dict(zip(self.keys,self.values)))
+
+class Credential(db.Model):
+    user_id = db.Column(
+        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable = False, primary_key = True
+    )
+    user = relationship('User')
+    _keys = db.Column(db.String(255), nullable = False)
+    _values = db.Column(db.String(255), nullable = False)
+    timeout = db.Column(db.String(12), nullable = False)
+    _credential_issued = db.Column(db.Text, nullable = False)
+    
+    def __init__(self, **kwargs):
+        
+        keys = kwargs.pop('keys')
+        self._keys = ','.join(keys)
+        
+        values = kwargs.pop('values')
+        self._values = ','.join(values)
+
+        credential_issued = kwargs.pop('credential_issued')
+        self._credential_issued = hexlify(encode(credential_issued))
+
+
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def keys(self):
+        return self._keys.split(',')
+
+    @property
+    def values(self):
+        return self._values.split(',')
+    
+    @property
+    def credential_issued(self):
+        return decode(unhexlify(self._credential_issued))
