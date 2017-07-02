@@ -24,7 +24,6 @@ class CredentialUser():
         import requests
         
         if params != None and ipub != None:
-            print 'Params and ipub set'
             self.params = params
             self.ipub = ipub
         elif info_url != None:
@@ -60,11 +59,9 @@ class CredentialUser():
     def attr_to_bn(self, k, v, t):
         " Transforms attr to Bn"
         (_ ,_ ,_ ,o) = self.params
-        test = "".join(val for val in k)
-        
         key = Bn.from_binary("".join(val.encode('UTF-8') for val in k)) % o
         value = Bn.from_binary("".join(val.encode('UTF-8') for val in v)) % o
-        timeout = Bn.from_binary(t) % o
+        timeout = Bn.from_binary(str(t)) % o
         return key, value, timeout
   
 
@@ -95,7 +92,7 @@ class CredentialUser():
     def get_credential_token(self):
         with open(self.crypto_dir + '/cred', 'rb') as f:
             return(decode(f.read()))
-    
+
     def save_mac(self, mac):
          with open(self.crypto_dir + '/mac', 'wb+') as f:
             f.write(encode(mac))
