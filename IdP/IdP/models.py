@@ -8,21 +8,22 @@ from binascii import hexlify, unhexlify
 
 db = SQLAlchemy()
 
+
 class User(db.Model):
     # https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(40), unique=True,
-                         nullable=False)
+                     nullable=False)
     given_name = db.Column(db.String(100), nullable=False)
     family_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120),unique=True, 
-                        index=True, nullable=True)
+    email = db.Column(db.String(120), unique=True,
+                      index=True, nullable=True)
     email_verified = db.Column(db.Boolean())
     gender = db.Column(db.String(20))
     zoneinfo = db.Column(db.String(50))
     pwdhash = db.Column(db.String(54), nullable=False)
     birthdate = db.Column(db.String(20))
- 
+
     def __init__(self, **kwargs):
         _email = kwargs.pop('email')
         self.email = _email.lower()
@@ -33,32 +34,32 @@ class User(db.Model):
 
     def set_password(self, password):
         self.pwdhash = generate_password_hash(password)
-    
+
     def check_password(self, password):
         return check_password_hash(self.pwdhash, password)
-    
+
     def get_values_by_keys(self, keys):
         result = []
         for k in keys:
-            result.append(getattr(self,k,None))
+            result.append(getattr(self, k, None))
         return result
 
-class Client(db.Model):
-    name = db.Column(db.String(40), nullable = False)
-    client_id = db.Column(db.String(40), primary_key = True,
-                            nullable = False)
-    client_secret = db.Column(db.String(55), unique = True,
-                              nullable = False)
-    client_type = db.Column(db.String(20), nullable = False)
-    _redirect_uris = db.Column(db.Text, nullable = False)
-    _default_scope = db.Column(db.Text)
 
+class Client(db.Model):
+    name = db.Column(db.String(40), nullable=False)
+    client_id = db.Column(db.String(40), primary_key=True,
+                          nullable=False)
+    client_secret = db.Column(db.String(55), unique=True,
+                              nullable=False)
+    client_type = db.Column(db.String(20), nullable=False)
+    _redirect_uris = db.Column(db.Text, nullable=False)
+    _default_scope = db.Column(db.Text)
 
     def __init__(self, **kwargs):
         redirect_uris = kwargs.pop('redirect_uris').splitlines()
-        self._redirect_uris = ' '.join(redirect_uris)       
+        self._redirect_uris = ' '.join(redirect_uris)
         default_scope = kwargs.pop('default_scope')
-        self._default_scope = ' '.join(default_scope) 
+        self._default_scope = ' '.join(default_scope)
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -150,6 +151,7 @@ class Token(db.Model):
         db.session.commit()
         return self
 
+
 class Pseudonym(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(
@@ -161,14 +163,15 @@ class Pseudonym(db.Model):
     _keys = db.Column(db.String(255), nullable=False)
     _values = db.Column(db.String(255), nullable=False)
     timeout = db.Column(db.String(12), nullable=False)
+
     def __init__(self, **kwargs):
-        
+
         uid = kwargs.pop('uid')
         self._uid = str(uid)
-        
+
         keys = kwargs.pop('keys')
         self._keys = ','.join(keys)
-        
+
         values = kwargs.pop('values')
         self._values = ','.join(values)
 
@@ -186,31 +189,32 @@ class Pseudonym(db.Model):
     @property
     def values(self):
         return self._values.split(',')
+
     @property
     def attr(self):
-        return(dict(zip(self.keys,self.values)))
+        return(dict(zip(self.keys, self.values)))
+
 
 class Credential(db.Model):
     user_id = db.Column(
-        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable = False, primary_key = True
+        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, primary_key=True
     )
     user = relationship('User')
-    _keys = db.Column(db.String(255), nullable = False)
-    _values = db.Column(db.String(255), nullable = False)
-    timeout = db.Column(db.String(12), nullable = False)
-    _credential_issued = db.Column(db.Text, nullable = False)
-    
+    _keys = db.Column(db.String(255), nullable=False)
+    _values = db.Column(db.String(255), nullable=False)
+    timeout = db.Column(db.String(12), nullable=False)
+    _credential_issued = db.Column(db.Text, nullable=False)
+
     def __init__(self, **kwargs):
-        
+
         keys = kwargs.pop('keys')
         self._keys = ','.join(keys)
-        
+
         values = kwargs.pop('values')
         self._values = ','.join(values)
 
         credential_issued = kwargs.pop('credential_issued')
         self._credential_issued = hexlify(encode(credential_issued))
-
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -222,7 +226,7 @@ class Credential(db.Model):
     @property
     def values(self):
         return self._values.split(',')
-    
+
     @property
     def credential_issued(self):
         return decode(unhexlify(self._credential_issued))

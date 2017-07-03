@@ -1,12 +1,14 @@
-from amacscreds import cred_setup, cred_CredKeyge, cred_UserKeyge, cred_secret_issue_user, cred_secret_issue, cred_secret_issue_user_decrypt, cred_show, cred_show_check, cred_secret_issue_user_check
+from amacscreds import (cred_setup, cred_CredKeyge, cred_secret_issue,
+                        cred_show_check, cred_secret_issue_user_check)
 from genzkp import *
 from petlib.pack import encode, decode
 from petlib.bn import Bn
 import os
 
+
 class CredentialServer():
+
     def __init__(self, crypto_dir):
-        
         """
             __init__ imports the long term required values from files
         """
@@ -15,29 +17,28 @@ class CredentialServer():
         if not os.path.exists(crypto_dir):
             os.makedirs(crypto_dir)
         try:
-            with open(self.crypto_dir + '/params', 'rb') as f: 
+            with open(self.crypto_dir + '/params', 'rb') as f:
                 self.params = decode(f.read())
         except IOError:
             self.params = cred_setup()
-            with open(self.crypto_dir +'/params', 'wb+') as f:
-                f.write( encode(self.params) )
+            with open(self.crypto_dir + '/params', 'wb+') as f:
+                f.write(encode(self.params))
         try:
             with open(self.crypto_dir + '/isec', 'rb') as f:
                 self.isec = decode(f.read())
-            with open(self.crypto_dir + '/ipub', 'rb') as f: 
+            with open(self.crypto_dir + '/ipub', 'rb') as f:
                 self.ipub = decode(f.read())
         except IOError:
             self.ipub, self.isec = cred_CredKeyge(self.params, self.n)
             with open(self.crypto_dir + '/isec', 'wb+') as f:
-                f.write( encode(self.isec) )
-            
-            with open(self.crypto_dir + '/ipub', 'wb+') as f:
-                f.write( encode(self.ipub) )
+                f.write(encode(self.isec))
 
+            with open(self.crypto_dir + '/ipub', 'wb+') as f:
+                f.write(encode(self.ipub))
 
     def get_info(self):
         return (self.params, self.ipub)
-    
+
     def issue_credential(self, (pub, EGenc, sig_u), k, v, t):
         """
             TO BE USED FROM THE CREDENTIAL ISSUING ENDPOINT
@@ -55,13 +56,13 @@ class CredentialServer():
         if not cred_secret_issue_user_check(self.params, pub, EGenc, sig_u):
             raise Exception("Error: Issuing checks failed")
 
-        cred_issued = cred_secret_issue(self.params, pub, EGenc, self.ipub, self.isec, public_attr)
+        cred_issued = cred_secret_issue(
+            self.params, pub, EGenc, self.ipub, self.isec, public_attr)
         return cred_issued
 
-    
     def attr_to_bn(self, k, v, t):
         " Transforms attr to Bn"
-        (_ ,_ ,_ ,o) = self.params
+        (_, _, _, o) = self.params
         key = Bn.from_binary("".join(val.encode('UTF-8') for val in k)) % o
         value = Bn.from_binary("".join(val.encode('UTF-8') for val in v)) % o
         timeout = Bn.from_binary(str(t)) % o
@@ -80,11 +81,11 @@ class CredentialServer():
         (G, g, h, o) = self.params
         (u, Cmis, Cup) = creds
 
-        key , value, timeout = self.attr_to_bn(k, v, t)
+        key, value, timeout = self.attr_to_bn(k, v, t)
 
         if not cred_show_check(self.params, self.ipub, self.isec, creds, sig_o):
             raise Exception("Error: aMac failed")
-        
+
         # Execute the verification on the proof 'sig_openID'
         Gid = G.hash_to_point(Service_name)
         zk = define_proof(G)
