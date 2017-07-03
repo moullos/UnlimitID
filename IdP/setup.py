@@ -12,5 +12,8 @@ setup(
         'wtforms',
         'Flask-WTF==0.14'
     ],
+    tests_require=[
+        'pytest'
+    ],
     dependency_links=['https://github.com/gdanezis/petlib.git/tarball/master']
 )

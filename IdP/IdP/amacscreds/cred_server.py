@@ -68,7 +68,8 @@ class CredentialServer():
         timeout = Bn.from_binary(str(t)) % o
         return key, value, timeout
 
-    def check_pseudonym_and_credential(self, creds, sig_o, sig_openID, Service_name, Uid, k, v, t):
+    def check_pseudonym_and_credential(self, creds, sig_o, sig_openID,
+                                       Service_name, Uid, k, v, t):
         """
             TO BE USED FROM THE PSEUDONYM REGISTRATION ENDPOINT
             creds: the credential
@@ -83,7 +84,8 @@ class CredentialServer():
 
         key, value, timeout = self.attr_to_bn(k, v, t)
 
-        if not cred_show_check(self.params, self.ipub, self.isec, creds, sig_o):
+        if not cred_show_check(self.params, self.ipub, self.isec,
+                               creds, sig_o):
             raise Exception("Error: aMac failed")
 
         # Execute the verification on the proof 'sig_openID'

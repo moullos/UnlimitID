@@ -1,5 +1,8 @@
-from wtforms import Form, widgets ,SelectMultipleField, StringField, PasswordField, validators
+from wtforms import Form, widgets ,SelectMultipleField, StringField, PasswordField, validators, widgets, SelectMultipleField
 
+class MultiCheckboxField(SelectMultipleField):
+widget = widgets.ListWidget(prefix_label=False)
+option_widget = widgets.CheckboxInput()
 
 class RegisterForm(Form):
     
@@ -7,4 +10,6 @@ class RegisterForm(Form):
 
 class CredentialForm(Form):
     email = StringField('Email', [validators.Email("Please enter a valid email")])
-    password = PasswordField('Password', [validators.DataRequired()])     
+    password = PasswordField('Password', [validators.DataRequired()])
+    attr = MultiCheckboxField('Attributes in the credential')
+

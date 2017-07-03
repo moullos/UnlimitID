@@ -197,7 +197,8 @@ class Pseudonym(db.Model):
 
 class Credential(db.Model):
     user_id = db.Column(
-        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, primary_key=True
+        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'),
+        nullable=False, primary_key=True
     )
     user = relationship('User')
     _keys = db.Column(db.String(255), nullable=False)

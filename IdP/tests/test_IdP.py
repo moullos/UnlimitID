@@ -1,8 +1,9 @@
 import os
 import unittest
-from IdP import app, db, credentialServer as IdP_cs
+from IdP import app, db, credentialServer
 from IdP.models import User, Client, Credential
 from IdP.amacscreds.cred_user import CredentialUser
+from IdP.amacscreds.cred_server import CredentialServer
 from petlib.pack import encode, decode
 from cStringIO import StringIO
 from datetime import date, timedelta
@@ -15,9 +16,9 @@ class IdPTestCase(unittest.TestCase):
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
         self.app = app.test_client()
-        self.IdP_cs = IdP_cs
+        self.IdP_cs = credentialServer
         self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name'
-        self.user_cs = CredentialUser('user_crypto', params = IdP_cs.params, ipub = IdP_cs.ipub)
+        self.user_cs = CredentialUser('user_crypto', params = self.IdP_cs.params, ipub = self.IdP_cs.ipub)
         db.create_all()
 
     def tearDown(self):
@@ -151,6 +152,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('/unlimitID/credential', data = encode ((
                                                             'invalid_email@unlimitID.com', 
                                                             'pass',
+                                                             ['name'],
                                                              user_token
                                                         ))
                                                     )
@@ -162,6 +164,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('/unlimitID/credential', data = encode ((
                                                             'test@unlimitID', 
                                                             'wrongpassword',
+                                                             ['name'],
                                                              user_token
                                                         ))
                                                     )
@@ -173,7 +176,8 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data = encode ((
                                                             'test@unlimitID.com',
                                                             'pass',
-                                                            user_token
+                                                             ['name'],
+                                                             user_token
                                                         ))
                                                     )
         cred_token = decode(rv.data)
@@ -185,6 +189,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data = encode ((
                                                             'test@unlimitID.com',
                                                             'pass',
+                                                            ['name'],
                                                             user_token
                                                         ))
                                                     )
@@ -203,6 +208,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data = encode ((
                                                             'test@unlimitid.com',
                                                             'pass',
+                                                            ['name'],
                                                             user_token
                                                         ))
                                                     )
@@ -211,6 +217,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data = encode ((
                                                             'test@unlimitid.com',
                                                             'pass',
+                                                            ['name'],
                                                             user_token
                                                         ))
                                                     )
@@ -228,7 +235,7 @@ class IdPTestCase(unittest.TestCase):
         user = User.query.filter_by(name = 'test').first()
         values = user.get_values_by_keys(['name'])
         timeout = timeout_date.isoformat()
-        cred_issued = IdP_cs.issue_credential(user_token,['name'], values, timeout)
+        cred_issued = self.IdP_cs.issue_credential(user_token,['name'], values, timeout)
         cred_token = (cred_issued, ['name'], values, timeout)
         self.user_cs.issue_verify( cred_token, user_token)
         cred = Credential(
@@ -251,6 +258,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data = encode ((
                                                             'test@unlimitid.com',
                                                             'pass',
+                                                            ['name'],
                                                             user_token
                                                         ))
                                                     )
@@ -276,7 +284,13 @@ class IdPTestCase(unittest.TestCase):
         cred, keys, values, timeout  = self.user_cs.get_credential_token()
         self.add_client(client_service_name, client_id)
         return self.user_cs.show(proof_service_name, keys, values, timeout)
-   
+  
+    def test_authorize_get(self):
+        show_proof = self.prepare_authorize('Service_name','Service_name', 'test')
+        rv = self.app.get(self.testing_url)
+        assert b'The client is requesting access to name' in rv.data
+        self.assertEqual(rv.status_code, 200)
+
     def test_authorize_post_invalid_service_name(self):
         show_proof = self.prepare_authorize('Invalid_service','Service_name', 'test')
         rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(show_proof)), 'show')})
@@ -324,7 +338,7 @@ class IdPTestCase(unittest.TestCase):
         values = user.get_values_by_keys(['name'])
         timeout_date = date.today() - timedelta(days = 14)
         timeout = timeout_date.isoformat()
-        cred_issued = IdP_cs.issue_credential(user_token,['name'], values, timeout )
+        cred_issued = self.IdP_cs.issue_credential(user_token,['name'], values, timeout )
         cred_token = (cred_issued, ['name'], values, timeout)
         self.user_cs.issue_verify( cred_token, user_token)
         cred, keys, values, timeout  = self.user_cs.get_credential_token()
@@ -335,5 +349,16 @@ class IdPTestCase(unittest.TestCase):
         show_proof = self.get_expired_credential('Service_name', 'Service_name', 'test')
         rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(show_proof)), 'show')})
         assert b'Credential expired' in rv.data
+
+    def test_authorized_post_happy_path(self):
+        show_proof = self.prepare_authorize('Service_name', 'Service_name', 'test')
+        rv = self.app.post(self.testing_url, data = {'show' : (StringIO(encode(show_proof)), 'show')})
+        assert rv.status_code == 302
+        assert b'http://localhost:8000/oauth/authorize?code=' in rv.headers['Location']
+        
+    
+        
+
+
 if __name__ == '__main__':
     unittest.main()

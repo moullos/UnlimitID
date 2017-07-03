@@ -176,8 +176,8 @@ def authorize(*args, **kwargs):
 
     if request.method == 'POST':
         f = form.show.data
-        (creds, sig_o, sig_openID, Service_name, 
-        uid, keys, values, timeout) = decode(f.read())
+        (creds, sig_o, sig_openID, Service_name,
+         uid, keys, values, timeout) = decode(f.read())
         f.close()
         # Checking whether the service exists
         client = Client.query.filter_by(name=Service_name).first()

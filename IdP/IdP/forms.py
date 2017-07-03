@@ -18,7 +18,7 @@ class SignupForm(Form):
     email = StringField('Email Address', [validators.Email(
         "Please enter a valid email address")])
     gender = SelectField('Gender', choices=[
-                ('male', 'Male'), ('female', 'Female'), ('other', 'Other')])
+        ('male', 'Male'), ('female', 'Female'), ('other', 'Other')])
     zoneinfo = StringField('Zoneinfo', [validators.DataRequired()])
     birthdate = DateField('Birthday', [validators.DataRequired()])
     password = PasswordField('New Password', [
@@ -49,6 +49,6 @@ class ClientForm(Form):
     client_type = SelectField('Type', choices=[
         ('public', 'Public'), ('confidential', 'Confidential')])
     redirect_uris = TextAreaField('Redirect URIS', [
-                                    validators.DataRequired(),
-                                    validators.length(max=200)])
+        validators.DataRequired(),
+        validators.length(max=200)])
     scopes = MultiCheckboxField('Scope')
