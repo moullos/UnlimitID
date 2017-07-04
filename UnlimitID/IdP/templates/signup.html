@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block body %}
+
+<body>
+    <div class = "container">
+        <h4>Signup</h4>
+        {% from "_formhelpers.html" import render_field %}
+        <form method=post action="/signup">
+            <dl>
+                {{render_field(form.username)}}
+                {{render_field(form.firstname)}}
+                {{render_field(form.lastname)}}
+                {{render_field(form.email)}}
+                {{render_field(form.gender)}}
+                {{render_field(form.zoneinfo)}}
+                {{render_field(form.birthdate)}}
+                {{render_field(form.password)}}
+                {{render_field(form.confirm)}}
+            </dl>
+            <p><input type=submit value=Register></p>
+        </form>
+        
+        {% if error %}
+            <p class="error"><strong>Error:</strong>{{error}}</p>
+        {% endif %}
+
+    </div>
+</body>
+
+{% endblock %}
