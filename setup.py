@@ -15,6 +15,6 @@ setup(
         'Flask-WTF==0.14'
     ],
     tests_require=[
-        'pytest'
+        'pytest', 'tox'
     ],
 )
