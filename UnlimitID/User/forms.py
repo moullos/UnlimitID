@@ -10,5 +10,5 @@ class RegisterForm(Form):
 class CredentialForm(Form):
     email = StringField('Email', [validators.Email("Please enter a valid email")])
     password = PasswordField('Password', [validators.DataRequired()])
-    attr = MultiCheckboxField('Attributes in the credential')
+    keys = MultiCheckboxField('Keys in the credential')
 
