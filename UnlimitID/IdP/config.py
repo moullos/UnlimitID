@@ -1,6 +1,5 @@
 # Credential Lifetime in days. Default is two weeks
 CREDENTIAL_LIFETIME = 14
-
 # Define the module directory
 import os
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
