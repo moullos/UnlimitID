@@ -1,29 +1,24 @@
 {% extends "layout.html" %}
-
+{% import 'macros.html' as macros %}
 {% block body %}
 
+
 <body>
-    <div class = "container">
-        <h4>Client Signup</h4>
-        {% from "_formhelpers.html" import render_field %}
-        <form method=post action="/client_signup">
-            <dl>
-                {{render_field(form.name)}}
-                {{render_field(form.client_id)}}
-                {{render_field(form.client_secret)}}
-                {{render_field(form.confirm)}}
-                {{render_field(form.client_type)}}
-                {{render_field(form.redirect_uris)}}
-                {{render_field(form.scopes)}}
-            </dl>
-            <p><input type=submit value=Register></p>
-        </form>
-        
-        {% if error %}
-            <p class="error"><strong>Error:</strong>{{error}}</p>
-        {% endif %}
-
-    </div>
+    <div class="row">
+        <div class="col-xs-12 col-md-3 col-sm-4 col-sm-offset-4 col-md-offset-4 col-lg-3 col-lg-offset-4">
+            <div class="login-message">
+                <h2>Register a client to UnlimitID</h2> 
+            </div>
+            {% call macros.render_form(form, action_url=url_for('client_signup'), action_text='Register',
+                                        class_='login-form') %}
+                {{macros.render_field(form.name)}}
+                {{macros.render_field(form.client_id)}}
+                {{macros.render_field(form.client_secret)}}
+                {{macros.render_field(form.confirm)}}
+                {{macros.render_field(form.client_type)}}
+                {{macros.render_field(form.redirect_uris)}}
+                {{macros.render_checkbox_field(form.scopes)}}
+            {% endcall %}
+        </div>
 </body>
-
 {% endblock %}
