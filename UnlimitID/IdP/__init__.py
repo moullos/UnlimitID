@@ -70,7 +70,6 @@ def create_app(crypto_dir, return_all=False):
     cs = CredentialServer(os.path.join(app.instance_path, 'IdP', crypto_dir))
     db.init_app(app)
     db.app = app
-    db.create_all()
     setUpViews(app, oauth, db, cs)
     if return_all == False:
         return app
