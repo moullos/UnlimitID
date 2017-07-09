@@ -7,6 +7,7 @@ from config import CREDENTIAL_LIFETIME
 from petlib.pack import encode, decode
 from datetime import date, datetime, timedelta
 
+
 def setUpViews(app, oauth, db, cs):
     @app.route('/signup', methods=['GET', 'POST'])
     def signup(*args, **kwargs):
@@ -52,7 +53,6 @@ def setUpViews(app, oauth, db, cs):
                     return redirect(url_for('home'))
         return render_template('signup.html', form=form)
 
-
     @app.route('/client_signup', methods=['GET', 'POST'])
     def client_signup():
         form = ClientForm(request.form)
@@ -89,14 +89,12 @@ def setUpViews(app, oauth, db, cs):
             return redirect(url_for('home'))
         return render_template('client.html', form=form)
 
-
     @app.route('/unlimitID/.well-known/info', methods=['POST'])
     def info():
         """
         A page that exposes the server's public parameters
         """
         return encode(cs.get_info())
-
 
     @app.route('/unlimitID/credential', methods=['POST'])
     def credential(*args, **kwargs):
@@ -108,28 +106,32 @@ def setUpViews(app, oauth, db, cs):
         except Exception:
             return "Invalid Data in Request"
         # Checking the user's email and password
+        if keys == []:
+            return 'Cannot issue credential with no attributes'
         user = User.query.filter_by(email=email.lower()).first()
         if user is not None and user.check_password(password):
             # Checking if a valid credential already exists
             cred = Credential.query.filter_by(user_id=user.id).first()
             if cred is not None:
-                if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
-                        date.today() >= timedelta(days=2)):
-                    # if the credential expires in more than 2 days return the
-                    # existing credential
-                    return encode((cred.credential_issued,
-                                   cred.keys,
-                                   cred.values,
-                                   cred.timeout))
-                else:
-                    # if the credential expires in less that 2 days return a new
-                    # credential
-                    db.session.delete(cred)
+                if cred.keys == keys:
+                    if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
+                            date.today() >= timedelta(days=2)):
+                        # if the credential expires in more than
+                        # 2 days return the existing credential
+                        return encode((cred.credential_issued,
+                                       cred.keys,
+                                       cred.values,
+                                       cred.timeout))
+                    else:
+                        # if the credential expires in less that
+                        # 2 days return a new credential
+                        db.session.delete(cred)
             # Setting values, keys and timeout for the issued credential
             values = user.get_values_by_keys(keys)
             timeout_date = date.today() + timedelta(days=CREDENTIAL_LIFETIME)
             timeout = timeout_date.isoformat()
-            cred_issued = cs.issue_credential(user_token, keys, values, timeout)
+            cred_issued = cs.issue_credential(
+                user_token, keys, values, timeout)
             cred = Credential(
                 user_id=user.id,
                 keys=keys,
@@ -142,11 +144,9 @@ def setUpViews(app, oauth, db, cs):
         else:
             return "Invalid email or password"
 
-
     @app.route('/')
     def index():
         return redirect(url_for('home'))
-
 
     @app.route('/home')
     def home():
@@ -154,7 +154,6 @@ def setUpViews(app, oauth, db, cs):
         Server's initial page
         """
         return render_template('home.html')
-
 
     @app.route('/oauth/authorize', methods=['GET', 'POST'])
     @oauth.authorize_handler
@@ -180,9 +179,11 @@ def setUpViews(app, oauth, db, cs):
             f.close()
             # Checking whether the service exists
             client = Client.query.filter_by(name=Service_name).first()
-            if client != None:
+            if client is not None:
                 # Checking if the credential is valid
-                if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID, Service_name, uid, keys, values, timeout):
+                if cs.check_pseudonym_and_credential(creds, sig_o, sig_openID,
+                                                     Service_name, uid, keys,
+                                                     values, timeout):
                     # Checking if the credential expired
                     if datetime.strptime(timeout, '%Y-%m-%d').date() >= date.today():
                         attr = dict(zip(keys, values))
@@ -196,7 +197,7 @@ def setUpViews(app, oauth, db, cs):
                             v.append(attr[scope])
                         pseudonym = Pseudonym.query.filter_by(
                             _uid=str(uid)).first()
-                        if pseudonym != None:
+                        if pseudonym is not None:
                             db.session.delete(pseudonym)
                             db.session.commit()
                         new_entry = Pseudonym(
@@ -218,28 +219,24 @@ def setUpViews(app, oauth, db, cs):
                 return "Invalid Service Name"
         return False
 
-
     @app.route('/oauth/token', methods=['POST', 'GET'])
     @oauth.token_handler
     def access_token():
         """
-        The server's access token endpoint. Returning {} makes the 
-        server to just return the default access token. Anything else 
+        The server's access token endpoint. Returning {} makes the
+        server to just return the default access token. Anything else
         you return gets added to the access token
         """
         return {}
-
 
     @app.route('/oauth/errors', methods=['GET'])
     def error():
         return jsonify(request.args)
 
-
     @app.route('/oauth/revoke', methods=['POST'])
     @oauth.revoke_handler
     def revoke_token():
         pass
-
 
     @app.route('/api/name')
     @oauth.require_oauth('name')
@@ -248,14 +245,12 @@ def setUpViews(app, oauth, db, cs):
         attr = oauth.user.attr
         return jsonify(name=attr['name'])
 
-
     @app.route('/api/birthdate')
     @oauth.require_oauth('birthdate')
     def birthdate_api():
         oauth = request.oauth
         attr = oauth.user.attr
         return jsonify(birthdate=attr['birthdate'])
-
 
     @app.route('/api/zoneinfo')
     @oauth.require_oauth('zoneinfo')
@@ -264,7 +259,6 @@ def setUpViews(app, oauth, db, cs):
         attr = oauth.user.attr
         return jsonify(zoneinfo=attr['zoneinfo'])
 
-
     @app.route('/api/gender')
     @oauth.require_oauth('gender')
     def gender_api():
@@ -272,13 +266,11 @@ def setUpViews(app, oauth, db, cs):
         attr = oauth.user.attr
         return jsonify(gender=attr['gender'])
 
-
     @app.route('/api/client')
     @oauth.require_oauth()
     def client_api():
         oauth = request.oauth
         return jsonify(client=oauth.client.name)
-
 
     @oauth.invalid_response
     def require_oauth_invalid(req):

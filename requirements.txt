@@ -1,0 +1,7 @@
+flask==0.11.1
+Flask-OAuthlib
+Flask-SQLAlchemy==2.1
+petlib
+wtforms
+Flask-WTF==0.14
+

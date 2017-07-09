@@ -9,7 +9,7 @@ from .amacscreds.cred_user import CredentialUser
 def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None, ipub=None):
 
     cs = CredentialUser(os.path.join(
-        app.instance_path, 'User', crypto_dir), info_url, params , ipub)
+        app.instance_path, 'User', crypto_dir), info_url, params, ipub)
     @app.route('/')
     def index():
         return redirect(url_for('home'))
@@ -18,11 +18,9 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
     def home():
         return render_template('home.html')
 
-
     @app.route('/refresh')
     def refresh():
         return render_template('under_construction.html')
-
 
     @app.route('/get_credential', methods=['GET', 'POST'])
     def get_credential():
@@ -31,15 +29,19 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
             along with the public attributes
         """
         all_keys = ['name', 'given_name', 'family_name', 'email',
-                    'email_verified', 'gender', 'zoneinfo', 'birthdate']
+                    'gender', 'zoneinfo', 'birthdate']
         form = CredentialForm(request.form)
         form.keys.choices = zip(all_keys, all_keys)
         if request.method == 'POST' and form.validate():
             email = form.email.data
             password = form.password.data
             keys = form.keys.data
+            if keys == []:
+                form.keys.errors.append(
+                    'A credential need to contain at least 1 key')
+                return render_template('credential.html', form=form)
             try:
-                user_token = cs.get_encrypted_attribute()
+                user_token = cs.get_user_token()
                 r = requests.post(
                     credential_url,
                     data=encode((email, password, keys, user_token))
@@ -72,4 +74,3 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
         return render_template('show.html', form=form)
 
     return app, cs
-

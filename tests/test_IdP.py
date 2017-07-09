@@ -17,7 +17,6 @@ class IdPTestCase(unittest.TestCase):
         app.secret_key = 'testing'
         app.testing = True
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
         self.app = app.test_client()
         self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name'
         self.user_cs = CredentialUser(

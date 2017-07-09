@@ -53,6 +53,14 @@ class CredentialUser():
             self.private_attr = [o.random()]
             with open(self.crypto_dir + '/private_attr', 'wb+') as f:
                 f.write(encode(self.private_attr))
+        try:
+            with open(self.crypto_dir + '/user_token', 'rb') as f:
+                self.user_token = decode(f.read())
+        except IOError:
+            user_token = cred_secret_issue_user(
+                    self.params, self.keypair,  self.private_attr)
+            with open(self.crypto_dir + '/user_token', 'wb+') as f:
+                f.write(encode(self.user_token))
 
     def attr_to_bn(self, k, v, t):
         " Transforms attr to Bn"
@@ -71,17 +79,8 @@ class CredentialUser():
         self.save_user_token(user_token)
         return user_token
 
-    def save_user_token(self, user_token):
-        with open(self.crypto_dir + '/user_token', 'wb+') as f:
-            f.write(encode(user_token))
-
     def get_user_token(self):
-        try:
-            with open(self.crypto_dir + '/user_token', 'rb') as f:
-                return(decode(f.read()))
-        except IOError:
-            raise Exception('Opening the file user_token failed')
-
+        return self.user_token
     def save_credential_token(self, cred):
         with open(self.crypto_dir + '/cred', 'wb+') as f:
             f.write(encode(cred))
