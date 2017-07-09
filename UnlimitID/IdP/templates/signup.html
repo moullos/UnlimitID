@@ -9,18 +9,18 @@
                 <h2>Register a user to UnlimitID</h2> 
             </div>
             {% call macros.render_form(form, action_url=url_for('signup'), action_text='Register',
-                                        class_='login-form') %}
-                {{macros.render_field(form.username)}}
-                {{macros.render_field(form.firstname)}}
-                {{macros.render_field(form.lastname)}}
-                {{macros.render_field(form.email)}}
-                {{macros.render_field(form.gender)}}
-                {{macros.render_field(form.zoneinfo)}}
-                {{macros.render_field(form.birthdate)}}
-                {{macros.render_field(form.password)}}
-                {{macros.render_field(form.confirm)}}
+            class_='login-form') %}
+            {{macros.render_field(form.username)}}
+            {{macros.render_field(form.firstname)}}
+            {{macros.render_field(form.lastname)}}
+            {{macros.render_field(form.email)}}
+            {{macros.render_field(form.gender)}}
+            {{macros.render_field(form.zoneinfo)}}
+            {{macros.render_field(form.birthdate)}}
+            {{macros.render_field(form.password)}}
+            {{macros.render_field(form.confirm)}}
             {% endcall %}
         </div>
-</body>
+    </body>
 
-{% endblock %}
+    {% endblock %}

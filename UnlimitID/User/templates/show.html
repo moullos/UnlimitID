@@ -8,11 +8,11 @@
             <div class="login-message">
                 <h2>Show for a specific service</h2> 
             </div>
-            {% call macros.render_form(form, action_url=url_for('show'), action_text='Show',
-                                        class_='login-form') %}
-                {{macros.render_field(form.service_name)}}
+            {% call macros.render_form(form, action_url=url_for('show'), 
+            action_text='Show', class_='login-form') %}
+            {{macros.render_field(form.service_name)}}
             {% endcall %}
         </div>
-</body>
+    </body>
 
-{% endblock %}
+    {% endblock %}
