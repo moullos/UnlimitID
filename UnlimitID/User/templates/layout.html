@@ -1,10 +1,36 @@
-<!doctype html>
-<title>UnlimitID</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
-<div class=page>
-  <h1>UnlimitID</h1>
-  {% for message in get_flashed_messages() %}
-    <div class=flash>{{ message }}</div>
-  {% endfor %}
-  {% block body %}{% endblock %}
-</div>
+<html>
+  <head>
+    <title>UnlimitID</title>
+
+
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://fonts.googleapis.com/css?family=Abel|Open+Sans:400,600" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <div class="row">
+        <div class="col-xs-12 col-md-3 col-sm-4 col-sm-offset-4 col-md-offset-4 col-lg-3 col-lg-offset-4">
+        <h1>UnlimitID</h1>
+        </div>
+ </div>
+
+  <body>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  <!-- Categories: success (green), info (blue), warning (yellow), danger (red) -->
+  {% if messages %}
+    {% for category, message in messages %}
+    <div class="row">
+        <div class="col-xs-12 col-md-3 col-sm-4 col-sm-offset-4 col-md-offset-4 col-lg-3 col-lg-offset-4">
+      		<div class="alert alert-{{ category }} alert-dismissible" role="alert">
+      			<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+     			<!-- <strong>Title</strong> --> {{ message }}
+      		</div>
+              </div>
+ </div>
+
+    {% endfor %}
+  {% endif %}
+{% endwith %}    
+{% block body %} {% endblock %}
+    
+  </body>
+</html>  
