@@ -17,6 +17,8 @@
                 {{macros.render_field(form.confirm)}}
                 {{macros.render_field(form.client_type)}}
                 {{macros.render_field(form.redirect_uris)}}
+                <b>Scope</b><p>
+                Please only request the least data necessary 
                 {{macros.render_checkbox_field(form.scopes)}}
             {% endcall %}
         </div>

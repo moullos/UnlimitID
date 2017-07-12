@@ -4,6 +4,7 @@ from genzkp import *
 from petlib.pack import encode, decode
 from petlib.bn import Bn
 import os
+from hashlib import sha512
 
 
 class CredentialServer():
@@ -63,9 +64,9 @@ class CredentialServer():
     def attr_to_bn(self, k, v, t):
         " Transforms attr to Bn"
         (_, _, _, o) = self.params
-        key = Bn.from_binary("".join(val.encode('UTF-8') for val in k)) % o
-        value = Bn.from_binary("".join(val.encode('UTF-8') for val in v)) % o
-        timeout = Bn.from_binary(str(t)) % o
+        key = Bn.from_binary(sha512("".join(k)).digest()) % o
+        value = Bn.from_binary(sha512("".join(v)).digest()) % o
+        timeout = Bn.from_binary(sha512(str(t)).digest()) % o
         return key, value, timeout
 
     def check_pseudonym_and_credential(self, creds, sig_o, sig_openID,

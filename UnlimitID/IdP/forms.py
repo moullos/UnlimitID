@@ -51,4 +51,4 @@ class ClientForm(Form):
     redirect_uris = TextAreaField('Redirect URIS', [
         validators.DataRequired(),
         validators.length(max=200)])
-    scopes = MultiCheckboxField('Scope')
+    scopes = MultiCheckboxField('')

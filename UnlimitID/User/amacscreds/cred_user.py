@@ -9,6 +9,7 @@ from amacscreds import (cred_setup, cred_CredKeyge, cred_UserKeyge,
                         cred_secret_issue_user_decrypt, cred_show,
                         cred_show_check, cred_secret_issue_user_check)
 from genzkp import *
+from hashlib import sha512
 
 
 class CredentialUser():
@@ -64,10 +65,11 @@ class CredentialUser():
     def attr_to_bn(self, k, v, t):
         " Transforms attr to Bn"
         (_, _, _, o) = self.params
-        key = Bn.from_binary("".join(val.encode('UTF-8') for val in k)) % o
-        value = Bn.from_binary("".join(val.encode('UTF-8') for val in v)) % o
-        timeout = Bn.from_binary(str(t)) % o
+        key = Bn.from_binary(sha512("".join(k)).digest()) % o
+        value = Bn.from_binary(sha512("".join(v)).digest()) % o
+        timeout = Bn.from_binary(sha512(str(t)).digest()) % o
         return key, value, timeout
+
 
     def get_encrypted_attribute(self):
         return self.user_token
