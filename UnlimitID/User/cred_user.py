@@ -21,21 +21,22 @@ class CredentialUser():
         If the server's public values are missing an Exception is raised.
         If any of the client's public values are missing, they are created.
         """
+
         self.crypto_dir = crypto_dir
         if not os.path.exists(crypto_dir):
             os.makedirs(crypto_dir)
-        import requests
-        if info_url is not None:
-            try:
-                r = requests.post(info_url)
-                if r.status_code == 200:
-                    self.params, self.ipub = decode(r.content)
-            except:
-                raise Exception("Could not access {}".format(info_url))
-
         if params is not None and ipub is not None:
             self.params = params
             self.ipub = ipub
+        else:
+            import requests
+            if info_url is not None:
+                try:
+                    r = requests.post(info_url)
+                    if r.status_code == 200:
+                        self.params, self.ipub = decode(r.content)
+                except:
+                    raise Exception("Could not access {}".format(info_url))
 
         try:
             with open(self.crypto_dir + '/keypair', 'rb') as f:
