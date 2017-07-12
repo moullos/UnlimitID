@@ -3,10 +3,14 @@ language: python
 python:
   - "2.7"
 # command to install dependencies
-install: "pip install tox"
+install: 
+  - "pip install tox"
+  - "pip install coveralls"
+
 # command to run tests
 script: tox
 
+after_success: "coveralls"
 branches:
   only:
     - master

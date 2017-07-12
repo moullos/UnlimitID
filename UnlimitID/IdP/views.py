@@ -102,7 +102,8 @@ def setUpViews(app, oauth, db, cs):
         A page for users to request credentials
         """
         try:
-            email, password, keys, user_token = decode(request.data)
+            (email, password, keys, user_token) = decode(request.data)
+            (_, enc_clients_secret,_) = user_token
         except Exception:
             return "Invalid Data in Request"
         # Checking the user's email and password
@@ -113,7 +114,7 @@ def setUpViews(app, oauth, db, cs):
             # Checking if a valid credential already exists
             cred = Credential.query.filter_by(
                 user_id=user.id,
-                _user_token=hexlify(encode(user_token))).first()
+                _enc_clients_secret=hexlify(encode(enc_clients_secret))).first()
             if cred is not None:
                 if cred.keys == keys:
                     if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
@@ -142,7 +143,7 @@ def setUpViews(app, oauth, db, cs):
                 values=values,
                 timeout=timeout,
                 credential_issued=cred_issued,
-                user_token=user_token)
+                enc_clients_secret=enc_clients_secret)
             db.session.add(cred)
             db.session.commit()
             return encode((cred_issued, keys, values, timeout))

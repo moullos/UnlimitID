@@ -205,7 +205,7 @@ class Credential(db.Model):
     _values = db.Column(db.String(255), nullable=False)
     timeout = db.Column(db.String(12), nullable=False)
     _credential_issued = db.Column(db.Text, nullable=False)
-    _user_token = db.Column(db.Text, nullable=False)
+    _enc_clients_secret = db.Column(db.Text, nullable=False)
 
     def __init__(self, **kwargs):
 
@@ -218,8 +218,8 @@ class Credential(db.Model):
         credential_issued = kwargs.pop('credential_issued')
         self._credential_issued = hexlify(encode(credential_issued))
 
-        user_token = kwargs.pop('user_token')
-        self._user_token = hexlify(encode(user_token))
+        enc_clients_secret = kwargs.pop('enc_clients_secret')
+        self._enc_clients_secret = hexlify(encode(enc_clients_secret))
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -237,5 +237,5 @@ class Credential(db.Model):
         return decode(unhexlify(self._credential_issued))
 
     @property
-    def user_token(self):
-        return decode(unhexlify(self._user_token))
+    def enc_clients_secret(self):
+        return decode(unhexlify(self._enc_clients_secret))

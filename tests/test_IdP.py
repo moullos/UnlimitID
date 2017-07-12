@@ -224,13 +224,14 @@ class IdPTestCase(unittest.TestCase):
             user_token, ['name'], values, timeout)
         cred_token = (cred_issued, ['name'], values, timeout)
         self.user_cs.issue_verify(cred_token, user_token)
+        (_, EGenc, _) = user_token
         cred = Credential(
             user_id=user.id,
             keys=['name'],
             values=values,
             timeout=timeout,
             credential_issued=cred_issued,
-            user_token=user_token)
+            enc_clients_secret=EGenc)
         self.db.session.add(cred)
         self.db.session.commit()
         return cred_token
@@ -240,6 +241,7 @@ class IdPTestCase(unittest.TestCase):
         timeout_date = date.today() - timedelta(days=13)
         cred_token_old = self.add_credential(timeout_date)
         user_token = self.user_cs.get_user_token()
+        print user_token
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitID.com',
             'pass',

@@ -1,0 +1,2 @@
+[run]
+omit = UnlimitID/IdP/amacscreds/*,UnlimitID/User/amacscreds/*,UnlimitID/IdP/static/*,UnlimitID/IdP/templates/*,UnlimitID/User/templates/*, UnlimitID/User/static/
