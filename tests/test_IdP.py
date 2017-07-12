@@ -1,4 +1,3 @@
-import os
 import unittest
 import shutil
 from UnlimitID.IdP import create_app
@@ -16,7 +15,7 @@ class IdPTestCase(unittest.TestCase):
             'tests/idp_crypto', return_all=True)
         app.secret_key = 'testing'
         app.testing = True
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'
         self.app = app.test_client()
         self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name'
         self.user_cs = CredentialUser(
@@ -28,7 +27,7 @@ class IdPTestCase(unittest.TestCase):
         self.db.drop_all()
         shutil.rmtree('tests/user_crypto')
 
-    ## /signup ##
+    # /signup #
     def user_signup(self, name, email):
         return self.app.post('/signup', data=dict(
             username=name,
@@ -77,7 +76,7 @@ class IdPTestCase(unittest.TestCase):
         assert b'Email already exists' in rv.data
         assert rv.status_code == 200
 
-    ## /client_signup ##
+    # /client_signup #
     def client_signup(self, name, client_id):
         return self.app.post('/client_signup', data=dict(
             name=name,
@@ -122,7 +121,7 @@ class IdPTestCase(unittest.TestCase):
         assert b'ID already exists' in rv.data
         assert rv.status_code == 200
 
-    ## /unlimitID/.well-known/info ##
+    # /unlimitID/.well-known/info #
     def test_info_get(self):
         rv = self.app.get('/unlimitID/.well-known/info')
         assert rv.status_code == 405
@@ -134,9 +133,9 @@ class IdPTestCase(unittest.TestCase):
             params, ipub = decode(rv.data)
         except:
             raised = True
-        assert raised == False
+        assert raised is False
 
-    ## /unlimitID/credential ##
+    # /unlimitID/credential #
     def test_credential_get(self):
         rv = self.app.get('/unlimitID/credential')
         assert rv.status_code == 405
@@ -152,18 +151,6 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('/unlimitID/credential', data=encode((
             'invalid_email@unlimitID.com',
             'pass',
-            ['name'],
-            user_token
-        ))
-        )
-        assert b'Invalid email or password' in rv.data
-
-    def test_credential_post_invalid_email(self):
-        self.add_user('test', 'test@unlimitID.com')
-        user_token = self.user_cs.get_encrypted_attribute()
-        rv = self.app.post('/unlimitID/credential', data=encode((
-            'test@unlimitID',
-            'wrongpassword',
             ['name'],
             user_token
         ))
@@ -199,7 +186,7 @@ class IdPTestCase(unittest.TestCase):
             self.user_cs.issue_verify(cred_token, user_token)
         except:
             raised = True
-        assert raised == False
+        assert raised is False
 
     def test_credential_post_already_existing_cred(self):
         # add a credential
@@ -226,12 +213,10 @@ class IdPTestCase(unittest.TestCase):
         assert cred_token1 == cred_token2
 
     def add_credential(self, timeout_date=None):
-        if timeout_date == None:
+        if timeout_date is None:
             timeout_date = date.today() + timedelta(days=14)
         self.add_user('test', 'test@unlimitID.com')
-        user_token = self.user_cs.get_encrypted_attribute()
-        password = 'pass'
-        email = 'test@unlimitID.com'
+        user_token = self.user_cs.get_user_token()
         user = User.query.filter_by(name='test').first()
         values = user.get_values_by_keys(['name'])
         timeout = timeout_date.isoformat()
@@ -244,7 +229,8 @@ class IdPTestCase(unittest.TestCase):
             keys=['name'],
             values=values,
             timeout=timeout,
-            credential_issued=cred_issued)
+            credential_issued=cred_issued,
+            user_token=user_token)
         self.db.session.add(cred)
         self.db.session.commit()
         return cred_token
@@ -255,7 +241,7 @@ class IdPTestCase(unittest.TestCase):
         cred_token_old = self.add_credential(timeout_date)
         user_token = self.user_cs.get_user_token()
         rv = self.app.post('unlimitID/credential', data=encode((
-            'test@unlimitid.com',
+            'test@unlimitID.com',
             'pass',
             ['name'],
             user_token
@@ -265,17 +251,17 @@ class IdPTestCase(unittest.TestCase):
         self.user_cs.issue_verify(cred_token_new, user_token)
         assert cred_token_new != cred_token_old
 
-    ## / ##
+    # / #
     def test_index_status_code(self):
         result = self.app.get('/')
         self.assertEqual(result.status_code, 302)
 
-    ## /home ##
+    # /home #
     def test_home_status_code(self):
         result = self.app.get('/home')
         self.assertEqual(result.status_code, 200)
 
-    ## /oauth/authorize ##
+    # /oauth/authorize #
     def prepare_authorize(self, proof_service_name, client_service_name, client_id):
         self.add_user_and_get_credential()
         cred, keys, values, timeout = self.user_cs.get_credential_token()
@@ -283,7 +269,7 @@ class IdPTestCase(unittest.TestCase):
         return self.user_cs.show(proof_service_name, keys, values, timeout)
 
     def test_authorize_get(self):
-        show_proof = self.prepare_authorize(
+        self.prepare_authorize(
             'Service_name', 'Service_name', 'test')
         rv = self.app.get(self.testing_url)
         assert b'The client is requesting access to name' in rv.data

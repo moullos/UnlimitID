@@ -4,7 +4,6 @@ import shutil
 from UnlimitID.User import create_app
 from UnlimitID.IdP.amacscreds.cred_server import CredentialServer
 from datetime import date
-from petlib.pack import encode, decode
 
 
 class UserTestCase(unittest.TestCase):
@@ -25,7 +24,7 @@ class UserTestCase(unittest.TestCase):
         shutil.rmtree(os.path.join(self.temp_dir, 'User', 'tests/user_crypto'))
         shutil.rmtree('tests/idp_crypto')
 
-    ## helpers ##
+    # helpers #
     def create_credential(self):
         user_token = self.User_cs.get_encrypted_attribute()
         keys = ['name']
@@ -37,6 +36,7 @@ class UserTestCase(unittest.TestCase):
         self.User_cs.issue_verify(
             (cred_token, keys, values, timeout), user_token)
 
+    # / #
     def test_index_get(self):
         rv = self.app.get('/')
         self.assertEqual(rv.status_code, 302)
@@ -45,6 +45,7 @@ class UserTestCase(unittest.TestCase):
         rv = self.app.get('/home')
         self.assertEqual(rv.status_code, 200)
 
+    # /get_credential#
     def test_credential_get(self):
         rv = self.app.get('/get_credential')
         self.assertEqual(rv.status_code, 200)
@@ -58,12 +59,11 @@ class UserTestCase(unittest.TestCase):
             follow_redirects=True
         )
         self.assertEqual(rv.status_code, 200)
-        print rv.data
         assert b'Could not get credential' in rv.data
 
+    # /show #
     def test_show_get_no_credential(self):
         rv = self.app.get('/show')
-        print rv.data
         assert b'Could not load credential. Do you have one?' in rv.data
 
     def test_show_get_with_credential(self):
@@ -76,11 +76,8 @@ class UserTestCase(unittest.TestCase):
         rv = self.app.post('/show',
                            data=dict(service_name='test'),
                            follow_redirects=True)
-        print rv.data
         assert b'Created show for test at show_test' in rv.data
         assert rv.status_code == 200
-        os.unlink('show_test')
-
 
 if __name__ == '__main__':
     unittest.main()

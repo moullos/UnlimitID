@@ -1,5 +1,7 @@
 from flask import Flask, redirect, render_template, url_for, session, request, jsonify, abort
 from flask_oauthlib.client import OAuth
+IDP_URL = 'http://127.0.0.1:5000'
+#IDP_URL = 'http://ec2-13-59-7-245.us-east-2.compute.amazonaws.com'
 def create_client(app):
     oauth = OAuth(app)
     remote = oauth.remote_app(
@@ -7,15 +9,12 @@ def create_client(app):
         consumer_key='dev',
         consumer_secret='dev',
         request_token_params={'scope': 'name gender'},
-        base_url='http://127.0.0.1:5000/api/',
+        base_url= IDP_URL + '/api/',
         request_token_url=None,
         access_token_method='POST',
-        access_token_url='http://127.0.0.1:5000/oauth/token',
-        authorize_url='http://127.0.0.1:5000/oauth/authorize'
+        access_token_url=IDP_URL+'/oauth/token',
+        authorize_url=IDP_URL+'/oauth/authorize'
     )
-    # To be added in a config file
-    credential_url = "http://127.0.0.1:5000/unlimitID/credential"
-
 
 
     @app.route('/')
