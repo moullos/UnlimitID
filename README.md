@@ -11,9 +11,55 @@ Full version of the paper published at WPES 2016 is available at http://www.cs.u
 
 
 ### Features
- * IdP implements an UnlimitID identity provider build upon flask-oauthlib 
+This repository includes 2 flask applications. UnlimitID/IdP is build upon [flask-oauthlib](https://flask-oauthlib.readthedocs.io/en/latest/) and provides all the typical OAuth2 endpoints along with two additional endpoints providing the necessary anonymous credentials and exposing the IdP's public parameters. UnlimitID/User provides all the out-of-band functionality preluding an UnlimitID flow
 
- * User provides the necessary out-of-band functionality preluding a typical UnlimitID flow.
+### Running the identity provider
+The easiers way to run the identity provider is through docker. 
+1. Get the latest container
+  docker pull unlimitid/idp:latest
+2. Run it!
+  docker run -d unlimitid/idp:latest
+  
+If you prefer to build the container on your own
+1. Clone the repository
+  git clone https://github.com/moullos/UnlimitID.git
+2. Change directory
+  cd UnlimitID
+3. Build the container
+  docker build -t your_tag_here . 
+  
+If you dont want to use docker
+1. Clone the repository
+  git clone https://github.com/moullos/UnlimitID.git
+2. Change directory
+  cd UnlimitID
+3. Create a virtual env
+  virtualenv env
+  source env/bin/activate
+4. Install the package 
+  pip install .
+5. Create a file that creates the app and runs it
+  from UnlimitID.IdP import create_app
+  app = create_app('crypto_idp')
+  app.run()
+
+### Running the user
+In order for the user to run, an IdP must also be running in order for the user to obtain up-to-date parameters
+1. Clone the repository
+  git clone https://github.com/moullos/UnlimitID.git
+2. Change directory
+  cd UnlimitID
+3. Create a virtual env
+  virtualenv env
+  source env/bin/activate
+4. Install the package 
+  pip install .
+5. Create a file that creates the app and runs it
+  from UnlimitID.User import create_app
+  app = create_app('crypto_user',IDP_URL)
+  app.run(host='localhost',port=3000)
+  
+  
 
 
 
