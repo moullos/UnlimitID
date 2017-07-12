@@ -17,10 +17,6 @@ RUN pip install uwsgi
 # Install app requirements
 RUN pip install .
  
-# Create app directory
- 
-# Set the default directory for our environment
- 
 # Expose port 80 for uwsgi
 EXPOSE 80
  
