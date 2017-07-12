@@ -18,10 +18,6 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
     def home():
         return render_template('home.html')
 
-    @app.route('/refresh')
-    def refresh():
-        return render_template('under_construction.html')
-
     @app.route('/get_credential', methods=['GET', 'POST'])
     def get_credential():
         """ The page for the user to obtain credentials.
@@ -66,8 +62,12 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
         if request.method == 'POST' and form.validate():
             service_name = form.service_name.data
             show_proof = cs.show(service_name, keys, values, timeout)
+            file_dir = os.path.join(
+                app.instance_path, 'User', 'Show')
             filename = 'show_{}'.format(service_name)
-            with open(filename, 'wb+') as f:
+            if not os.path.exists(file_dir):
+                os.makedirs(file_dir)
+            with open(os.path.join(file_dir, filename), 'wb+') as f:
                 f.write(encode(show_proof))
             flash("Created show for {} at {}".format(service_name, filename))
             return redirect(url_for('home'))

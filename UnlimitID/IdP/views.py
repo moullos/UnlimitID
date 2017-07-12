@@ -6,6 +6,7 @@ from flask import (redirect, url_for, render_template, flash,
 from config import CREDENTIAL_LIFETIME
 from petlib.pack import encode, decode
 from datetime import date, datetime, timedelta
+from binascii import hexlify
 
 
 def setUpViews(app, oauth, db, cs):
@@ -57,7 +58,7 @@ def setUpViews(app, oauth, db, cs):
     def client_signup():
         form = ClientForm(request.form)
         all_keys = ['name', 'given_name', 'family_name', 'email',
-                    'email_verified', 'gender', 'zoneinfo', 'birthdate']
+                    'gender', 'zoneinfo', 'birthdate']
         form.scopes.choices = zip(all_keys, all_keys)
         if request.method == 'POST' and form.validate():
             name = form.name.data
@@ -111,7 +112,9 @@ def setUpViews(app, oauth, db, cs):
         user = User.query.filter_by(email=email.lower()).first()
         if user is not None and user.check_password(password):
             # Checking if a valid credential already exists
-            cred = Credential.query.filter_by(user_id=user.id).first()
+            cred = Credential.query.filter_by(
+                user_id=user.id,
+                _user_token=hexlify(encode(user_token))).first()
             if cred is not None:
                 if cred.keys == keys:
                     if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
@@ -126,6 +129,8 @@ def setUpViews(app, oauth, db, cs):
                         # if the credential expires in less that
                         # 2 days return a new credential
                         db.session.delete(cred)
+                else:
+                    db.session.delete(cred)
             # Setting values, keys and timeout for the issued credential
             values = user.get_values_by_keys(keys)
             timeout_date = date.today() + timedelta(days=CREDENTIAL_LIFETIME)
@@ -137,7 +142,8 @@ def setUpViews(app, oauth, db, cs):
                 keys=keys,
                 values=values,
                 timeout=timeout,
-                credential_issued=cred_issued)
+                credential_issued=cred_issued,
+                user_token=user_token)
             db.session.add(cred)
             db.session.commit()
             return encode((cred_issued, keys, values, timeout))
@@ -242,6 +248,7 @@ def setUpViews(app, oauth, db, cs):
     @oauth.require_oauth('name')
     def name_api():
         oauth = request.oauth
+        print oauth.user.id
         attr = oauth.user.attr
         return jsonify(name=attr['name'])
 
