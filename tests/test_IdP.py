@@ -2,7 +2,7 @@ import unittest
 import shutil
 from UnlimitID.IdP import create_app
 from UnlimitID.IdP.models import User, Client, Credential
-from UnlimitID.User.amacscreds.cred_user import CredentialUser
+from UnlimitID.User.cred_user import CredentialUser
 from petlib.pack import encode, decode
 from cStringIO import StringIO
 from datetime import date, timedelta

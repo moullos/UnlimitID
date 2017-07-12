@@ -3,7 +3,7 @@ import requests
 from flask import redirect, url_for, render_template, request, flash
 from forms import RegisterForm, CredentialForm
 from petlib.pack import encode, decode
-from .amacscreds.cred_user import CredentialUser
+from .cred_user import CredentialUser
 
 
 def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None, ipub=None):

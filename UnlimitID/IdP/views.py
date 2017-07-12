@@ -1,4 +1,3 @@
-
 from .models import User, Client, Pseudonym, Credential
 from .forms import SignupForm, AuthorizeForm, ClientForm
 from flask import (redirect, url_for, render_template, flash,

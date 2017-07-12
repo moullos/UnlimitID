@@ -1,12 +1,10 @@
-#Flask related imports
 import os
 from flask import Flask, session
 from flask_oauthlib.provider import OAuth2Provider
 from datetime import datetime, timedelta
-from .models import User, Client, Pseudonym, Token, Grant, db
-from .amacscreds.cred_server import CredentialServer
+from .models import Client, Pseudonym, Token, Grant, db
+from .cred_server import CredentialServer
 from .views import setUpViews
-from petlib.pack import decode, encode
 
 
 def load_current_pseudonym():
@@ -72,7 +70,7 @@ def create_app(crypto_dir, return_all=False):
     db.app = app
     db.create_all()
     setUpViews(app, oauth, db, cs)
-    if return_all == False:
+    if return_all is False:
         return app
     else:
         return app, db, cs

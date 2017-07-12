@@ -2,7 +2,7 @@ import os
 import unittest
 import shutil
 from UnlimitID.User import create_app
-from UnlimitID.IdP.amacscreds.cred_server import CredentialServer
+from UnlimitID.IdP.cred_server import CredentialServer
 from datetime import date
 
 

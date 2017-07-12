@@ -1,6 +1,7 @@
-from amacscreds import (cred_setup, cred_CredKeyge, cred_secret_issue,
-                        cred_show_check, cred_secret_issue_user_check)
-from genzkp import *
+from .amacscreds.amacscreds import (cred_setup, cred_CredKeyge,
+                                    cred_secret_issue, cred_show_check,
+                                    cred_secret_issue_user_check)
+from .amacscreds.genzkp import *
 from petlib.pack import encode, decode
 from petlib.bn import Bn
 import os

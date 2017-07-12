@@ -1,14 +1,12 @@
 # General imports
-import sys
 import os
 # Crypto imports
 from petlib.pack import encode, decode
 from petlib.bn import Bn
-from amacscreds import (cred_setup, cred_CredKeyge, cred_UserKeyge,
-                        cred_secret_issue_user, cred_secret_issue,
-                        cred_secret_issue_user_decrypt, cred_show,
-                        cred_show_check, cred_secret_issue_user_check)
-from genzkp import *
+from .amacscreds.amacscreds import (cred_UserKeyge,
+                                   cred_secret_issue_user,
+                                   cred_secret_issue_user_decrypt, cred_show)
+from .amacscreds.genzkp import *
 from hashlib import sha512
 
 
@@ -70,7 +68,6 @@ class CredentialUser():
         timeout = Bn.from_binary(sha512(str(t)).digest()) % o
         return key, value, timeout
 
-
     def get_encrypted_attribute(self):
         return self.user_token
 
@@ -115,7 +112,7 @@ class CredentialUser():
     def show(self, Service_name, k, v, t):
         """
           TO BE USED FROM REGISTERING
-          Returns the ZK proofs and all the data you have to sent to the server 
+          Returns the ZK proofs and all the data you have to sent to the server
           to validate your previously issued credential
         """
         (G, g, h, o) = self.params
