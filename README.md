@@ -23,7 +23,7 @@ As both packages use [petlib](http://petlib.readthedocs.io/en/latest/) install t
   ```
 2. Run it!
   ```
-  $ docker run -d unlimitid/idp:latest
+  $ docker run -p 80:80 -d unlimitid/idp:latest
   ```
   
 **If you prefer to build the container on your own:**
