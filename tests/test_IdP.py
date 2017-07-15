@@ -1,6 +1,6 @@
 import unittest
 import shutil
-import os 
+import os
 from UnlimitID.IdP import create_app
 from UnlimitID.IdP.models import User, Client, Credential
 from UnlimitID.User.cred_user import CredentialUser
@@ -8,7 +8,9 @@ from petlib.pack import encode, decode
 from cStringIO import StringIO
 from datetime import date, timedelta
 import tests.config_test as cfg
-full_scope = ['name', 'given_name', 'family_name', 'email','zoneinfo','gender']
+full_scope = ['name', 'given_name',
+              'family_name', 'email', 'zoneinfo', 'gender']
+
 
 class IdPTestCase(unittest.TestCase):
 
@@ -206,12 +208,42 @@ class IdPTestCase(unittest.TestCase):
             'test@unlimitid.com',
             'pass',
             full_scope,
-            user_token
-        ))
+            user_token ))
         )
         cred_token2 = decode(rv.data)
         self.user_cs.issue_verify(cred_token2, user_token)
         assert cred_token1 == cred_token2
+
+    def test_credential_post_no_attr(self):
+        self.add_user('test', 'test@unlimitid.com')
+        user_token = self.user_cs.get_encrypted_attribute()
+        rv = self.app.post('unlimitID/credential', data=encode((
+            'test@unlimitid.com',
+            'pass',
+            [],
+            user_token ))
+        )
+        assert b'Cannot issue credential with no attributes' in rv.data
+
+    def test_credential_post_different_keys(self):
+        cred_token = self.add_credential(timeout_date = date.today())
+        user_token = self.user_cs.get_encrypted_attribute()
+        rv = self.app.post('unlimitID/credential', data=encode((
+            'test@unlimitid.com',
+            'pass',
+            ['name'],
+            user_token ))
+        )
+        raised = False
+        try:
+            cred_token = decode(rv.data)
+            self.user_cs.issue_verify(cred_token, user_token)
+        except:
+            raised = True
+        assert raised is False
+
+        
+
 
     def add_credential(self, timeout_date=None):
         if timeout_date is None:
@@ -353,12 +385,12 @@ class IdPTestCase(unittest.TestCase):
             'Service_name', 'Service_name', 'test')
         rv = self.app.post(self.testing_url, data={
                            'show': (StringIO(encode(show_proof)), 'show')},
+                           follow_redirects = False
                            )
+        print rv.data
         assert rv.status_code == 302
-        assert b'http://localhost:8000/oauth/authorize?code=' in rv.headers[
-            'Location']
-
-
+        assert b'http://localhost:8000/oauth/authorize?code=' in rv.headers['Location']
+        
 
 if __name__ == '__main__':
     unittest.main()

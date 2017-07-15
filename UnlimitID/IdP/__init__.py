@@ -65,6 +65,7 @@ def default_provider(app):
 def create_app(config, return_all=False):
     app = Flask(__name__)
     app.config.from_object(config)
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = 'true'
     csrf = CSRFProtect(app)
     oauth = default_provider(app)
     cs = CredentialServer(os.path.join(app.instance_path, 'IdP', config.CRYPTO_DIR))

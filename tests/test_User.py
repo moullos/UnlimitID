@@ -10,9 +10,9 @@ class UserTestCase(unittest.TestCase):
 
     def setUp(self):
         CRYPTO_DIR = 'tests/user_crypto'
-        CREDENTIAL_URL = 'test'
+        IdP_URL = 'test'
         self.IdP_cs = CredentialServer('tests/idp_crypto')
-        app, cs = create_app(CRYPTO_DIR, CREDENTIAL_URL,
+        app, cs = create_app(CRYPTO_DIR, idp_url = IdP_URL,
                              params=self.IdP_cs.params, ipub=self.IdP_cs.ipub, user_cs=True)
         self.temp_dir = app.instance_path
         app.secret_key = 'testing'
@@ -54,11 +54,11 @@ class UserTestCase(unittest.TestCase):
         rv = self.app.post('/get_credential', data=dict(
             email='test@UnlimitID.com',
             password='12345',
-            keys=['name']
-        ),
-            follow_redirects=True
+            keys=['name']),
+            follow_redirects = True
         )
         self.assertEqual(rv.status_code, 200)
+        print rv.data
         assert b'Could not get credential' in rv.data
 
     # /show #

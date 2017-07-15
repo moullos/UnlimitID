@@ -44,8 +44,7 @@ def setUpViews(app, oauth, db, cs):
                         gender=gender,
                         zoneinfo=zoneinfo,
                         birthdate=birthdate,
-                        password=password,
-                        enc_secret=None
+                        password=password
                     )
                     db.session.add(user)
                     db.session.commit()
@@ -164,6 +163,7 @@ def setUpViews(app, oauth, db, cs):
         return render_template('home.html')
 
     @app.route('/oauth/authorize', methods=['GET', 'POST'])
+
     @oauth.authorize_handler
     def authorize(*args, **kwargs):
         """
@@ -174,6 +174,7 @@ def setUpViews(app, oauth, db, cs):
         reveal to the RP. After the IdP validates the credential,
         a database record with the revealed attributes is created.
         """
+        print request.headers
         form = AuthorizeForm()
         if request.method == 'GET':
             scopes = kwargs.get('scopes')

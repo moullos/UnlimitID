@@ -35,6 +35,8 @@ class CredentialUser():
                     r = requests.post(info_url)
                     if r.status_code == 200:
                         self.params, self.ipub = decode(r.content)
+                    else:
+                        raise Exception("Could not access {}".format(info_url))
                 except:
                     raise Exception("Could not access {}".format(info_url))
 

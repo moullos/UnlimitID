@@ -35,6 +35,8 @@ class User(db.Model):
         if 'enc_secret' in kwargs:
             enc_secret = kwargs.pop('enc_secret')
             self._enc_secret = hexlify(encode(enc_secret))
+        else:
+            self._enc_secret = None    
 
         for k, v in kwargs.items():
             setattr(self, k, v)

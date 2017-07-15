@@ -10,7 +10,7 @@ SQLALCHEMY_TRACK_MODIFICATIONS = True
 DATABASES_CONNECT_OPTIONS = {}
 
 # Enable CSRF mitigation
-WTF_CSRF_ENABLED = True
+WTF_CSRF_ENABLED = False
 WTF_CSRF_SESSION_KEY = 'secret'
 
 # Secret Key for signing cookies
