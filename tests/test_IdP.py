@@ -1,21 +1,20 @@
 import unittest
 import shutil
+import os 
 from UnlimitID.IdP import create_app
 from UnlimitID.IdP.models import User, Client, Credential
 from UnlimitID.User.cred_user import CredentialUser
 from petlib.pack import encode, decode
 from cStringIO import StringIO
 from datetime import date, timedelta
-
+import tests.config_test as cfg
+full_scope = ['name', 'given_name', 'family_name', 'email','zoneinfo','gender']
 
 class IdPTestCase(unittest.TestCase):
 
     def setUp(self):
         app, self.db, self.IdP_cs = create_app(
-            'tests/idp_crypto', return_all=True)
-        app.secret_key = 'testing'
-        app.testing = True
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'
+            cfg, return_all=True)
         self.app = app.test_client()
         self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name'
         self.user_cs = CredentialUser(
@@ -25,6 +24,7 @@ class IdPTestCase(unittest.TestCase):
     def tearDown(self):
         self.db.session.remove()
         self.db.drop_all()
+        os.unlink('tests/test.db')
         shutil.rmtree('tests/user_crypto')
 
     # /signup #
@@ -50,7 +50,7 @@ class IdPTestCase(unittest.TestCase):
             email_verified=True,
             gender='Male',
             zoneinfo='UK\London',
-            password='pass'
+            password='pass',
         )
         self.db.session.add(user)
         self.db.session.commit()
@@ -85,7 +85,7 @@ class IdPTestCase(unittest.TestCase):
             confirm='test',
             client_type='confidential',
             redirect_uris='http://localhost:8000/oauth/authorize',
-            scope=['test'],
+            scope=full_scope,
         ), follow_redirects=True)
 
     def add_client(self, name, client_id):
@@ -95,7 +95,7 @@ class IdPTestCase(unittest.TestCase):
             client_secret='pass',
             client_type='confidential',
             redirect_uris='http://localhost:8000/oauth/authorize',
-            default_scope=['name']
+            default_scope=full_scope
         )
         self.db.session.add(client)
         self.db.session.commit()
@@ -106,6 +106,7 @@ class IdPTestCase(unittest.TestCase):
 
     def test_client_signup(self):
         rv = self.client_signup('test', 'test')
+        print rv.data
         assert b'Client Added Successfully' in rv.data
         assert rv.status_code == 200
 
@@ -151,7 +152,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('/unlimitID/credential', data=encode((
             'invalid_email@unlimitID.com',
             'pass',
-            ['name'],
+            full_scope,
             user_token
         ))
         )
@@ -163,7 +164,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitID.com',
             'pass',
-            ['name'],
+            full_scope,
             user_token
         ))
         )
@@ -176,7 +177,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitID.com',
             'pass',
-            ['name'],
+            full_scope,
             user_token
         ))
         )
@@ -195,7 +196,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitid.com',
             'pass',
-            ['name'],
+            full_scope,
             user_token
         ))
         )
@@ -204,7 +205,7 @@ class IdPTestCase(unittest.TestCase):
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitid.com',
             'pass',
-            ['name'],
+            full_scope,
             user_token
         ))
         )
@@ -218,20 +219,19 @@ class IdPTestCase(unittest.TestCase):
         self.add_user('test', 'test@unlimitID.com')
         user_token = self.user_cs.get_user_token()
         user = User.query.filter_by(name='test').first()
-        values = user.get_values_by_keys(['name'])
+        values = user.get_values_by_keys(full_scope)
         timeout = timeout_date.isoformat()
         cred_issued = self.IdP_cs.issue_credential(
-            user_token, ['name'], values, timeout)
-        cred_token = (cred_issued, ['name'], values, timeout)
+            user_token, full_scope, values, timeout)
+        cred_token = (cred_issued, full_scope, values, timeout)
         self.user_cs.issue_verify(cred_token, user_token)
         (_, EGenc, _) = user_token
         cred = Credential(
             user_id=user.id,
-            keys=['name'],
+            keys=full_scope,
             values=values,
             timeout=timeout,
-            credential_issued=cred_issued,
-            enc_clients_secret=EGenc)
+            credential_issued=cred_issued)
         self.db.session.add(cred)
         self.db.session.commit()
         return cred_token
@@ -241,11 +241,10 @@ class IdPTestCase(unittest.TestCase):
         timeout_date = date.today() - timedelta(days=13)
         cred_token_old = self.add_credential(timeout_date)
         user_token = self.user_cs.get_user_token()
-        print user_token
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitID.com',
             'pass',
-            ['name'],
+            full_scope,
             user_token
         ))
         )
@@ -331,12 +330,12 @@ class IdPTestCase(unittest.TestCase):
         email = 'test@unlimitID.com'
         password = 'pass'
         user = User.query.filter_by(name='test').first()
-        values = user.get_values_by_keys(['name'])
+        values = user.get_values_by_keys(full_scope)
         timeout_date = date.today() - timedelta(days=14)
         timeout = timeout_date.isoformat()
         cred_issued = self.IdP_cs.issue_credential(
-            user_token, ['name'], values, timeout)
-        cred_token = (cred_issued, ['name'], values, timeout)
+            user_token, full_scope, values, timeout)
+        cred_token = (cred_issued, full_scope, values, timeout)
         self.user_cs.issue_verify(cred_token, user_token)
         cred, keys, values, timeout = self.user_cs.get_credential_token()
         self.add_client(client_service_name, client_id)
@@ -353,10 +352,12 @@ class IdPTestCase(unittest.TestCase):
         show_proof = self.prepare_authorize(
             'Service_name', 'Service_name', 'test')
         rv = self.app.post(self.testing_url, data={
-                           'show': (StringIO(encode(show_proof)), 'show')})
+                           'show': (StringIO(encode(show_proof)), 'show')},
+                           )
         assert rv.status_code == 302
         assert b'http://localhost:8000/oauth/authorize?code=' in rv.headers[
             'Location']
+
 
 
 if __name__ == '__main__':

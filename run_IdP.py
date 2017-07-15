@@ -1,3 +1,5 @@
 from UnlimitID.IdP import create_app
-
-app = create_app('crypto_idp')
+import config_IdP as cfg
+app = create_app(cfg)
+if __name__ == '__main__':
+    app.run()

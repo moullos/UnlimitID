@@ -73,7 +73,7 @@ class CredentialServer():
     def check_pseudonym_and_credential(self, creds, sig_o, sig_openID,
                                        Service_name, Uid, k, v, t):
         """
-            TO BE USED FROM THE PSEUDONYM REGISTRATION ENDPOINT
+            USED FROM THE PSEUDONYM REGISTRATION ENDPOINT
             creds: the credential
             sig_o: proof of valid aMac
             sig_openID: proof of valid pseudonym

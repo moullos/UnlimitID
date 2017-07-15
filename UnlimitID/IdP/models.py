@@ -23,12 +23,19 @@ class User(db.Model):
     zoneinfo = db.Column(db.String(50))
     pwdhash = db.Column(db.String(54), nullable=False)
     birthdate = db.Column(db.String(20))
+    _enc_secret = db.Column(db.Text)
 
     def __init__(self, **kwargs):
         _email = kwargs.pop('email')
         self.email = _email.lower()
+
         password = kwargs.pop('password')
         self.set_password(password)
+
+        if 'enc_secret' in kwargs:
+            enc_secret = kwargs.pop('enc_secret')
+            self._enc_secret = hexlify(encode(enc_secret))
+
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -44,13 +51,27 @@ class User(db.Model):
             result.append(getattr(self, k, None))
         return result
 
+    def check_enc_secret(self, enc_secret):
+        _enc_secret = hexlify(encode(enc_secret))
+        if self._enc_secret is None:
+            self._enc_secret = _enc_secret
+            db.session.commit()
+            return True
+        elif self._enc_secret == _enc_secret:
+            return True
+        else:
+            return False
+
+    @property
+    def enc_clients_secret(self):
+        return decode(unhexlify(self._enc_clients_secret))
+
 
 class Client(db.Model):
     name = db.Column(db.String(40), nullable=False)
     client_id = db.Column(db.String(40), primary_key=True,
-                          nullable=False)
-    client_secret = db.Column(db.String(55), unique=True,
-                              nullable=False)
+                          nullable=False, unique=True)
+    client_secret = db.Column(db.String(55), nullable=False)
     client_type = db.Column(db.String(20), nullable=False)
     _redirect_uris = db.Column(db.Text, nullable=False)
     _default_scope = db.Column(db.Text)
@@ -205,7 +226,6 @@ class Credential(db.Model):
     _values = db.Column(db.String(255), nullable=False)
     timeout = db.Column(db.String(12), nullable=False)
     _credential_issued = db.Column(db.Text, nullable=False)
-    _enc_clients_secret = db.Column(db.Text, nullable=False)
 
     def __init__(self, **kwargs):
 
@@ -217,9 +237,6 @@ class Credential(db.Model):
 
         credential_issued = kwargs.pop('credential_issued')
         self._credential_issued = hexlify(encode(credential_issued))
-
-        enc_clients_secret = kwargs.pop('enc_clients_secret')
-        self._enc_clients_secret = hexlify(encode(enc_clients_secret))
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -235,7 +252,3 @@ class Credential(db.Model):
     @property
     def credential_issued(self):
         return decode(unhexlify(self._credential_issued))
-
-    @property
-    def enc_clients_secret(self):
-        return decode(unhexlify(self._enc_clients_secret))

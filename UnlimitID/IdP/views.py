@@ -2,7 +2,6 @@ from .models import User, Client, Pseudonym, Credential
 from .forms import SignupForm, AuthorizeForm, ClientForm
 from flask import (redirect, url_for, render_template, flash,
                    session, jsonify, request)
-from config import CREDENTIAL_LIFETIME
 from petlib.pack import encode, decode
 from datetime import date, datetime, timedelta
 from binascii import hexlify
@@ -45,7 +44,8 @@ def setUpViews(app, oauth, db, cs):
                         gender=gender,
                         zoneinfo=zoneinfo,
                         birthdate=birthdate,
-                        password=password
+                        password=password,
+                        enc_secret=None
                     )
                     db.session.add(user)
                     db.session.commit()
@@ -103,7 +103,7 @@ def setUpViews(app, oauth, db, cs):
         """
         try:
             (email, password, keys, user_token) = decode(request.data)
-            (_, enc_clients_secret,_) = user_token
+            (_, enc_secret, _) = user_token
         except Exception:
             return "Invalid Data in Request"
         # Checking the user's email and password
@@ -111,42 +111,44 @@ def setUpViews(app, oauth, db, cs):
             return 'Cannot issue credential with no attributes'
         user = User.query.filter_by(email=email.lower()).first()
         if user is not None and user.check_password(password):
-            # Checking if a valid credential already exists
-            cred = Credential.query.filter_by(
-                user_id=user.id,
-                _enc_clients_secret=hexlify(encode(enc_clients_secret))).first()
-            if cred is not None:
-                if cred.keys == keys:
-                    if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
-                            date.today() >= timedelta(days=2)):
-                        # if the credential expires in more than
-                        # 2 days return the existing credential
-                        return encode((cred.credential_issued,
-                                       cred.keys,
-                                       cred.values,
-                                       cred.timeout))
+            # Checking the users ciphertext
+            if user.check_enc_secret(enc_secret):
+                # Checking if a valid credential already exists
+                cred = Credential.query.filter_by(user_id=user.id).first()
+                if cred is not None:
+                    if cred.keys == keys:
+                        if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
+                                date.today() >= timedelta(days=2)):
+                            # if the credential expires in more than
+                            # 2 days return the existing credential
+                            return encode((cred.credential_issued,
+                                           cred.keys,
+                                           cred.values,
+                                           cred.timeout))
+                        else:
+                            # if the credential expires in less that
+                            # 2 days return a new credential
+                            db.session.delete(cred)
                     else:
-                        # if the credential expires in less that
-                        # 2 days return a new credential
                         db.session.delete(cred)
-                else:
-                    db.session.delete(cred)
-            # Setting values, keys and timeout for the issued credential
-            values = user.get_values_by_keys(keys)
-            timeout_date = date.today() + timedelta(days=CREDENTIAL_LIFETIME)
-            timeout = timeout_date.isoformat()
-            cred_issued = cs.issue_credential(
-                user_token, keys, values, timeout)
-            cred = Credential(
-                user_id=user.id,
-                keys=keys,
-                values=values,
-                timeout=timeout,
-                credential_issued=cred_issued,
-                enc_clients_secret=enc_clients_secret)
-            db.session.add(cred)
-            db.session.commit()
-            return encode((cred_issued, keys, values, timeout))
+                # Setting values, keys and timeout for the issued credential
+                values = user.get_values_by_keys(keys)
+                timeout_date = date.today() + \
+                    timedelta(days=app.config['CREDENTIAL_LIFETIME'])
+                timeout = timeout_date.isoformat()
+                cred_issued = cs.issue_credential(
+                    user_token, keys, values, timeout)
+                cred = Credential(
+                    user_id=user.id,
+                    keys=keys,
+                    values=values,
+                    timeout=timeout,
+                    credential_issued=cred_issued)
+                db.session.add(cred)
+                db.session.commit()
+                return encode((cred_issued, keys, values, timeout))
+            else:
+                return "Unknown user token"
         else:
             return "Invalid email or password"
 
@@ -202,7 +204,7 @@ def setUpViews(app, oauth, db, cs):
                             k.append(scope)
                             v.append(attr[scope])
                         pseudonym = Pseudonym.query.filter_by(
-                            _uid=str(uid)).first()
+                            _uid=str(uid), client_id=client.client_id).first()
                         if pseudonym is not None:
                             db.session.delete(pseudonym)
                             db.session.commit()
@@ -244,11 +246,16 @@ def setUpViews(app, oauth, db, cs):
     def revoke_token():
         pass
 
+    @app.route('/api/pseudonym')
+    @oauth.require_oauth()
+    def pseudonym_api():
+        pseudonym = request.oauth.user._uid
+        return jsonify(pseudonym=pseudonym)
+
     @app.route('/api/name')
     @oauth.require_oauth('name')
     def name_api():
         oauth = request.oauth
-        print oauth.user.id
         attr = oauth.user.attr
         return jsonify(name=attr['name'])
 

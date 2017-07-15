@@ -11,7 +11,7 @@ class MultiCheckboxField(SelectMultipleField):
     option_widget = widgets.CheckboxInput()
 
 
-class SignupForm(Form):
+class SignupForm(FlaskForm):
     username = StringField('Username', [validators.Length(min=4, max=25)])
     firstname = StringField('Firstname', [validators.Length(min=4, max=25)])
     lastname = StringField('Lastname', [validators.Length(min=4, max=25)])
@@ -28,7 +28,7 @@ class SignupForm(Form):
     confirm = PasswordField('Repeat Password')
 
 
-class LoginForm(Form):
+class LoginForm(FlaskForm):
     email = StringField(
         'Email', [validators.Email("Please enter a valid email")])
     password = PasswordField('Password', [validators.DataRequired()])
@@ -38,7 +38,7 @@ class AuthorizeForm(FlaskForm):
     show = FileField(validators=[FileRequired()])
 
 
-class ClientForm(Form):
+class ClientForm(FlaskForm):
     name = StringField('Name', [validators.DataRequired()])
     client_id = StringField('ID', [validators.DataRequired()])
     client_secret = PasswordField('Password', [
