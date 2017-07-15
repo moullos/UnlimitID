@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from .models import Client, Pseudonym, Token, Grant, db
 from .cred_server import CredentialServer
 from .views import setUpViews
+from flask_wtf.csrf import CSRFProtect
 
 
 def load_current_pseudonym():
@@ -61,11 +62,12 @@ def default_provider(app):
     return oauth
 
 
-def create_app(crypto_dir, return_all=False):
+def create_app(config, return_all=False):
     app = Flask(__name__)
-    app.config.from_object('UnlimitID.IdP.config')
+    app.config.from_object(config)
+    csrf = CSRFProtect(app)
     oauth = default_provider(app)
-    cs = CredentialServer(os.path.join(app.instance_path, 'IdP', crypto_dir))
+    cs = CredentialServer(os.path.join(app.instance_path, 'IdP', config.CRYPTO_DIR))
     db.init_app(app)
     db.app = app
     db.create_all()

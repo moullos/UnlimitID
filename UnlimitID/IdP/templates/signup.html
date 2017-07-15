@@ -8,6 +8,7 @@
             <div class="login-message">
                 <h2>Register a user to UnlimitID</h2> 
             </div>
+            {{ form.csrf_token }}
             {% call macros.render_form(form, action_url=url_for('signup'), action_text='Register',
             class_='login-form') %}
             {{macros.render_field(form.username)}}
