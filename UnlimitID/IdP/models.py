@@ -18,11 +18,10 @@ class User(db.Model):
     family_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True,
                       index=True, nullable=True)
-    email_verified = db.Column(db.Boolean())
-    gender = db.Column(db.String(20))
-    zoneinfo = db.Column(db.String(50))
+    gender = db.Column(db.String(20), nullable=False)
+    zoneinfo = db.Column(db.String(50), nullable=False)
     pwdhash = db.Column(db.String(54), nullable=False)
-    birthdate = db.Column(db.String(20))
+    birthdate = db.Column(db.String(20), nullable=False)
     _enc_secret = db.Column(db.Text)
 
     def __init__(self, **kwargs):

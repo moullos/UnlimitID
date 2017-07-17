@@ -174,7 +174,6 @@ def setUpViews(app, oauth, db, cs):
         reveal to the RP. After the IdP validates the credential,
         a database record with the revealed attributes is created.
         """
-        print request.headers
         form = AuthorizeForm()
         if request.method == 'GET':
             scopes = kwargs.get('scopes')
@@ -256,6 +255,8 @@ def setUpViews(app, oauth, db, cs):
     @app.route('/api/name')
     @oauth.require_oauth('name')
     def name_api():
+        print request
+        print request.headers
         oauth = request.oauth
         attr = oauth.user.attr
         return jsonify(name=attr['name'])

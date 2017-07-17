@@ -2,14 +2,14 @@ import unittest
 import shutil
 import os
 from UnlimitID.IdP import create_app
-from UnlimitID.IdP.models import User, Client, Credential
+from UnlimitID.IdP.models import User, Client, Credential, Grant
 from UnlimitID.User.cred_user import CredentialUser
 from petlib.pack import encode, decode
 from cStringIO import StringIO
 from datetime import date, timedelta
 import tests.config_test as cfg
 full_scope = ['name', 'given_name',
-              'family_name', 'email', 'zoneinfo', 'gender']
+              'family_name', 'email', 'zoneinfo', 'gender', 'birthdate']
 
 
 class IdPTestCase(unittest.TestCase):
@@ -17,8 +17,9 @@ class IdPTestCase(unittest.TestCase):
     def setUp(self):
         app, self.db, self.IdP_cs = create_app(
             cfg, return_all=True)
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = 'true'
         self.app = app.test_client()
-        self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope=name'
+        self.testing_url = '/oauth/authorize?response_type=code&client_id=test&redirect_uri=http://localhost:8000/oauth/authorize&scope='+'+'.join(full_scope)
         self.user_cs = CredentialUser(
             'tests/user_crypto', params=self.IdP_cs.params, ipub=self.IdP_cs.ipub)
         self.db.create_all()
@@ -50,6 +51,7 @@ class IdPTestCase(unittest.TestCase):
             family_name='family_name',
             email=email,
             email_verified=True,
+            birthdate ='2001-01-01',
             gender='Male',
             zoneinfo='UK\London',
             password='pass',
@@ -208,7 +210,7 @@ class IdPTestCase(unittest.TestCase):
             'test@unlimitid.com',
             'pass',
             full_scope,
-            user_token ))
+            user_token))
         )
         cred_token2 = decode(rv.data)
         self.user_cs.issue_verify(cred_token2, user_token)
@@ -221,18 +223,18 @@ class IdPTestCase(unittest.TestCase):
             'test@unlimitid.com',
             'pass',
             [],
-            user_token ))
+            user_token))
         )
         assert b'Cannot issue credential with no attributes' in rv.data
 
     def test_credential_post_different_keys(self):
-        cred_token = self.add_credential(timeout_date = date.today())
+        cred_token = self.add_credential(timeout_date=date.today())
         user_token = self.user_cs.get_encrypted_attribute()
         rv = self.app.post('unlimitID/credential', data=encode((
             'test@unlimitid.com',
             'pass',
             ['name'],
-            user_token ))
+            user_token))
         )
         raised = False
         try:
@@ -241,9 +243,6 @@ class IdPTestCase(unittest.TestCase):
         except:
             raised = True
         assert raised is False
-
-        
-
 
     def add_credential(self, timeout_date=None):
         if timeout_date is None:
@@ -385,12 +384,37 @@ class IdPTestCase(unittest.TestCase):
             'Service_name', 'Service_name', 'test')
         rv = self.app.post(self.testing_url, data={
                            'show': (StringIO(encode(show_proof)), 'show')},
-                           follow_redirects = False
+                           follow_redirects=False
                            )
-        print rv.data
         assert rv.status_code == 302
-        assert b'http://localhost:8000/oauth/authorize?code=' in rv.headers['Location']
-        
+        assert b'http://localhost:8000/oauth/authorize?code=' in rv.headers[
+            'Location']
+        import urlparse
+        parsed = urlparse.urlparse(rv.headers['Location'])
+        [code] = urlparse.parse_qs(parsed.query)['code']
+        rv = self.app.get('/oauth/token',
+                          data=dict(
+                              grant_type='authorization_code',
+                              code=code,
+                              client_secret='pass',
+                              client_id='test',
+                              redirect_uri='http://localhost:8000/oauth/authorize'
+                          )
+                          )
+        import ast
+        token = ast.literal_eval(rv.data)
+        rv = self.app.get('/api/pseudonym',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        assert 'pseudonym' in rv.data
+        rv = self.app.get('/api/name',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        assert 'name' in rv.data
+        rv = self.app.get('/api/birthdate',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        assert 'birthdate' in rv.data
+        rv = self.app.get('/api/zoneinfo',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        assert 'zoneinfo' in rv.data
+        rv = self.app.get('/api/gender',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        assert 'gender' in rv.data
+        rv = self.app.get('/api/client',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        assert 'client' in rv.data
 
 if __name__ == '__main__':
     unittest.main()
