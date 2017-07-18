@@ -126,13 +126,13 @@ class IdPTestCase(unittest.TestCase):
         assert b'ID already exists' in rv.data
         assert rv.status_code == 200
 
-    # /unlimitID/.well-known/info #
+    # /unlimitID/info #
     def test_info_get(self):
-        rv = self.app.get('/unlimitID/.well-known/info')
+        rv = self.app.get('/unlimitID/info')
         assert rv.status_code == 405
 
     def test_info_post(self):
-        rv = self.app.post('/unlimitID/.well-known/info')
+        rv = self.app.post('/unlimitID/info')
         raised = False
         try:
             params, ipub = decode(rv.data)
@@ -403,18 +403,15 @@ class IdPTestCase(unittest.TestCase):
                           )
         import ast
         token = ast.literal_eval(rv.data)
-        rv = self.app.get('/api/pseudonym',headers ={'Authorization': 'Bearer '+token['access_token'] })
+        rv = self.app.get('/api/userinfo',headers ={'Authorization': 'Bearer '+token['access_token'] })
         assert 'pseudonym' in rv.data
-        rv = self.app.get('/api/name',headers ={'Authorization': 'Bearer '+token['access_token'] })
         assert 'name' in rv.data
-        rv = self.app.get('/api/birthdate',headers ={'Authorization': 'Bearer '+token['access_token'] })
         assert 'birthdate' in rv.data
-        rv = self.app.get('/api/zoneinfo',headers ={'Authorization': 'Bearer '+token['access_token'] })
         assert 'zoneinfo' in rv.data
-        rv = self.app.get('/api/gender',headers ={'Authorization': 'Bearer '+token['access_token'] })
         assert 'gender' in rv.data
         rv = self.app.get('/api/client',headers ={'Authorization': 'Bearer '+token['access_token'] })
         assert 'client' in rv.data
+
 
 if __name__ == '__main__':
     unittest.main()
