@@ -1,4 +1,4 @@
-from .models import User, Client, Pseudonym, Credential
+from .models import User, Client, Pseudonym, Credential, Token
 from .forms import SignupForm, AuthorizeForm, ClientForm
 from flask import (redirect, url_for, render_template, flash,
                    session, jsonify, request)
@@ -88,7 +88,7 @@ def setUpViews(app, oauth, db, cs):
             return redirect(url_for('home'))
         return render_template('client.html', form=form)
 
-    @app.route('/unlimitID/.well-known/info', methods=['POST'])
+    @app.route('/unlimitID/info', methods=['POST'])
     def info():
         """
         A page that exposes the server's public parameters
@@ -163,7 +163,6 @@ def setUpViews(app, oauth, db, cs):
         return render_template('home.html')
 
     @app.route('/oauth/authorize', methods=['GET', 'POST'])
-
     @oauth.authorize_handler
     def authorize(*args, **kwargs):
         """
@@ -193,7 +192,7 @@ def setUpViews(app, oauth, db, cs):
                                                      Service_name, uid, keys,
                                                      values, timeout):
                     # Checking if the credential expired
-                    if datetime.strptime(timeout, '%Y-%m-%d').date() >= date.today():
+                    if datetime.strptime(timeout, '%Y-%m-%d').date() > date.today():
                         attr = dict(zip(keys, values))
                         scopes = client.default_scopes
                         k = []
@@ -246,41 +245,23 @@ def setUpViews(app, oauth, db, cs):
     def revoke_token():
         pass
 
-    @app.route('/api/pseudonym')
+    @app.route('/api/userinfo')
     @oauth.require_oauth()
-    def pseudonym_api():
-        pseudonym = request.oauth.user._uid
-        return jsonify(pseudonym=pseudonym)
-
-    @app.route('/api/name')
-    @oauth.require_oauth('name')
     def name_api():
-        print request
-        print request.headers
         oauth = request.oauth
-        attr = oauth.user.attr
-        return jsonify(name=attr['name'])
-
-    @app.route('/api/birthdate')
-    @oauth.require_oauth('birthdate')
-    def birthdate_api():
-        oauth = request.oauth
-        attr = oauth.user.attr
-        return jsonify(birthdate=attr['birthdate'])
-
-    @app.route('/api/zoneinfo')
-    @oauth.require_oauth('zoneinfo')
-    def zoneinfo_api():
-        oauth = request.oauth
-        attr = oauth.user.attr
-        return jsonify(zoneinfo=attr['zoneinfo'])
-
-    @app.route('/api/gender')
-    @oauth.require_oauth('gender')
-    def gender_api():
-        oauth = request.oauth
-        attr = oauth.user.attr
-        return jsonify(gender=attr['gender'])
+        client_id = oauth.client.client_id
+        user_id = oauth.user.id
+        tok = (Token.query.filter_by(client_id=client_id,
+                                 user_id=user_id)).first()
+        scopes = tok.scopes
+        timeout = oauth.user.timeout
+        if datetime.strptime(timeout, '%Y-%m-%d').date() >= date.today():
+            attr = oauth.user.attr
+            allowed_attr = {s:attr[s] for s in scopes}
+            allowed_attr['pseudonym'] = oauth.user._uid
+            return jsonify(allowed_attr)
+        else:
+            return jsonify(error='Pseudonym Expired')
 
     @app.route('/api/client')
     @oauth.require_oauth()
