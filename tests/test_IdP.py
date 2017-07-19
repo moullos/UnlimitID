@@ -110,7 +110,6 @@ class IdPTestCase(unittest.TestCase):
 
     def test_client_signup(self):
         rv = self.client_signup('test', 'test')
-        print rv.data
         assert b'Client Added Successfully' in rv.data
         assert rv.status_code == 200
 
@@ -393,14 +392,15 @@ class IdPTestCase(unittest.TestCase):
         parsed = urlparse.urlparse(rv.headers['Location'])
         [code] = urlparse.parse_qs(parsed.query)['code']
         rv = self.app.get('/oauth/token',
-                          data=dict(
-                              grant_type='authorization_code',
-                              code=code,
-                              client_secret='pass',
-                              client_id='test',
-                              redirect_uri='http://localhost:8000/oauth/authorize'
+                            data=dict(
+                               grant_type='authorization_code',
+                               code=code,
+                               client_secret='pass',
+                               client_id='test',
+                               redirect_uri='http://localhost:8000/oauth/authorize'
+                            )
                           )
-                          )
+        # String to dict
         import ast
         token = ast.literal_eval(rv.data)
         rv = self.app.get('/api/userinfo',headers ={'Authorization': 'Bearer '+token['access_token'] })

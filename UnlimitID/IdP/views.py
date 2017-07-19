@@ -194,7 +194,7 @@ def setUpViews(app, oauth, db, cs):
                     # Checking if the credential expired
                     if datetime.strptime(timeout, '%Y-%m-%d').date() > date.today():
                         attr = dict(zip(keys, values))
-                        scopes = client.default_scopes
+                        scopes = request.args['scope'].split()
                         k = []
                         v = []
                         for scope in scopes:
