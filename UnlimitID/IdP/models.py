@@ -10,7 +10,6 @@ db = SQLAlchemy()
 
 
 class User(db.Model):
-    # https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(40), unique=True,
                      nullable=False)
@@ -220,8 +219,7 @@ class Pseudonym(db.Model):
 class Credential(db.Model):
     user_id = db.Column(
         db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'),
-        nullable=False, primary_key=True
-    )
+        nullable=False, primary_key=True, index=True)
     user = relationship('User')
     _keys = db.Column(db.String(255), nullable=False)
     _values = db.Column(db.String(255), nullable=False)
