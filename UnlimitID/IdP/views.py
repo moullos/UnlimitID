@@ -206,7 +206,6 @@ def setUpViews(app, oauth, db, cs):
                             _uid=str(uid), client_id=client.client_id).first()
                         if pseudonym is not None:
                             db.session.delete(pseudonym)
-                            db.session.commit()
                         new_entry = Pseudonym(
                             uid=uid,
                             client_id=client.client_id,
