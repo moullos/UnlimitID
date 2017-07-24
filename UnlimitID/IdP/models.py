@@ -180,7 +180,7 @@ class Pseudonym(db.Model):
         nullable=False,
     )
     client = relationship('Client')
-    _uid = db.Column(db.String(70), nullable=False, unique=True)
+    _uid = db.Column(db.String(70), nullable=False)
     _keys = db.Column(db.String(255), nullable=False)
     _values = db.Column(db.String(255), nullable=False)
     timeout = db.Column(db.String(12), nullable=False)
