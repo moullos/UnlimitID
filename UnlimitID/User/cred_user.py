@@ -3,10 +3,10 @@ import os
 # Crypto imports
 from petlib.pack import encode, decode
 from petlib.bn import Bn
-from .amacscreds.amacscreds import (cred_UserKeyge,
+from UnlimitID.User.amacscreds.amacscreds import (cred_UserKeyge,
                                    cred_secret_issue_user,
                                    cred_secret_issue_user_decrypt, cred_show)
-from .amacscreds.genzkp import *
+from UnlimitID.User.amacscreds.genzkp import *
 from hashlib import sha512
 
 

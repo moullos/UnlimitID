@@ -41,7 +41,7 @@ class CredentialServer():
     def get_info(self):
         return (self.params, self.ipub)
 
-    def issue_credential(self, (pub, EGenc, sig_u), k, v, t):
+    def issue_credential(self, user_token, k, v, t):
         """
             TO BE USED FROM THE CREDENTIAL ISSUING ENDPOINT
             pub : users public key
@@ -52,6 +52,7 @@ class CredentialServer():
             values : List of strings
             timeout : Str in ISO 8601 format
         """
+        pub, EGenc, sig_u = user_token
         keys, value, timeout = self.attr_to_bn(k, v, t)
         public_attr = [keys, value, timeout]
         # Testing using ZK if the user has knowledge of the secret
