@@ -1,11 +1,13 @@
 # General imports
 import os
+import random
+import string
 # Crypto imports
 from petlib.pack import encode, decode
 from petlib.bn import Bn
 from UnlimitID.User.amacscreds.amacscreds import (cred_UserKeyge,
-                                   cred_secret_issue_user,
-                                   cred_secret_issue_user_decrypt, cred_show)
+                                                  cred_secret_issue_user,
+                                                  cred_secret_issue_user_decrypt, cred_show)
 from UnlimitID.User.amacscreds.genzkp import *
 from hashlib import sha512
 
@@ -81,21 +83,37 @@ class CredentialUser():
     def get_user_token(self):
         return self.user_token
 
-    def save_credential_token(self, cred):
-        with open(self.crypto_dir + '/cred', 'wb+') as f:
+    def save_credential_token_and_mac(self, cred, mac):
+        id = self.random_id()
+        with open(self.crypto_dir + '/cred_{}'.format(id), 'wb+') as f:
             f.write(encode(cred))
-
-    def get_credential_token(self):
-        with open(self.crypto_dir + '/cred', 'rb') as f:
-            return(decode(f.read()))
-
-    def save_mac(self, mac):
-        with open(self.crypto_dir + '/mac', 'wb+') as f:
+        with open(self.crypto_dir + '/mac_{}'.format(id), 'wb+') as f:
             f.write(encode(mac))
 
-    def get_mac(self):
+    def get_credential_token_and_mac(self, id):
+        with open(self.crypto_dir + '/cred_{}'.format(id), 'rb') as f:
+            cred = decode(f.read())
+        with open(self.crypto_dir + '/mac_{}'.format(id), 'rb') as f:
+            mac = decode(f.read())
+        return (cred, mac)
+
+    def list_credential_tokens(self):
+        creds = []
+        for filename in os.listdir(self.crypto_dir):
+            if filename.startswith("cred_"):
+                cred_id = filename.split('_')[1]
+                with open(self.crypto_dir + '/' + filename, 'rb') as f:
+                    cred = decode(f.read())
+                    _, k, v, t = cred
+                    attr = ['{}={}'.format(key, value)
+                            for key, value in zip(k, v)]
+                    creds.append((cred_id,
+                                  'Attributes:{}\nTimeout: {}'.format(', '.join(attr), t)))
+        return creds
+
+    def get_mac(self, id):
         try:
-            with open(self.crypto_dir + '/mac', 'rb') as f:
+            with open(self.crypto_dir + '/mac_{}'.format(id), 'rb') as f:
                 return(decode(f.read()))
         except IOError:
             raise exception('Opening the file failed')
@@ -109,22 +127,20 @@ class CredentialUser():
         mac = cred_secret_issue_user_decrypt(
             self.params, self.keypair, u, EncE,
             self.ipub, public_attr, EGenc, sig_s)
-        self.save_credential_token(cred_token)
-        self.save_mac(mac)
+        self.save_credential_token_and_mac(cred_token, mac)
 
-    def show(self, Service_name, k, v, t):
+    def show(self, Service_name, cred_id):
         """
           TO BE USED FROM REGISTERING
           Returns the ZK proofs and all the data you have to sent to the server
           to validate your previously issued credential
         """
         (G, g, h, o) = self.params
+        (cred, mac) = self.get_credential_token_and_mac(cred_id)
+        (_, EGenc, _) = self.get_user_token()
+        (u, EncE, sig_s), k, v, t = cred
         key, value, timeout = self.attr_to_bn(k, v, t)
         public_attr = [key, value, timeout]
-        (_, EGenc, _) = self.get_user_token()
-        (u, EncE, sig_s), k, v, t = self.get_credential_token()
-        key, value, timeout = self.attr_to_bn(k, v, t)
-        mac = self.get_mac()
         (creds, sig_o, zis) = cred_show(self.params, self.ipub, mac,
                                         sig_s, public_attr + self.private_attr,
                                         export_zi=True)
@@ -165,6 +181,9 @@ class CredentialUser():
         sig_openID = zk.build_proof(env.get())
 
         return (creds, sig_o, sig_openID, Service_name, Uid, k, v, t)
+
+    def random_id(self):
+        return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
 
 
 def define_proof(G):

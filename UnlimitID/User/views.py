@@ -53,15 +53,16 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
 
     @app.route('/show', methods=['GET', 'POST'])
     def show():
-        try:
-            cred, keys, values, timeout = cs.get_credential_token()
-        except IOError:
+        form = RegisterForm(request.form)
+        creds = cs.list_credential_tokens()
+        form.credential.choices = creds
+        if creds == []:
             flash('Could not load credential. Do you have one?')
             return render_template('home.html')
-        form = RegisterForm(request.form)
         if request.method == 'POST' and form.validate():
             service_name = form.service_name.data
-            show_proof = cs.show(service_name, keys, values, timeout)
+            credential_id = form.credential.data
+            show_proof = cs.show(service_name, credential_id)
             file_dir = os.path.join(
                 app.instance_path, 'User', 'Show')
             filename = 'show_{}'.format(service_name)

@@ -73,8 +73,10 @@ class UserTestCase(unittest.TestCase):
 
     def test_show_post_with_credential(self):
         self.create_credential()
+        creds = self.User_cs.list_credential_tokens()
+        (cred_id, _) = creds[0]
         rv = self.app.post('/show',
-                           data=dict(service_name='test'),
+                           data=dict(service_name='test', credential=cred_id),
                            follow_redirects=True)
         assert b'Created show for test at show_test' in rv.data
         assert rv.status_code == 200

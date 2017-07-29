@@ -295,9 +295,9 @@ class IdPTestCase(unittest.TestCase):
     # /oauth/authorize #
     def prepare_authorize(self, proof_service_name, client_service_name, client_id):
         self.add_user_and_get_credential()
-        cred, keys, values, timeout = self.user_cs.get_credential_token()
+        (creds_id, _) = self.user_cs.list_credential_tokens()[0]
         self.add_client(client_service_name, client_id)
-        return self.user_cs.show(proof_service_name, keys, values, timeout)
+        return self.user_cs.show(proof_service_name, creds_id)
 
     def test_authorize_get(self):
         self.prepare_authorize(
@@ -367,9 +367,9 @@ class IdPTestCase(unittest.TestCase):
             user_token, full_scope, values, timeout)
         cred_token = (cred_issued, full_scope, values, timeout)
         self.user_cs.issue_verify(cred_token, user_token)
-        cred, keys, values, timeout = self.user_cs.get_credential_token()
+        (cred_id, _) = self.user_cs.list_credential_tokens()[0]
         self.add_client(client_service_name, client_id)
-        return self.user_cs.show(proof_service_name, keys, values, timeout)
+        return self.user_cs.show(proof_service_name, cred_id)
 
     def test_authorized_post_expired_credential(self):
         show_proof = self.get_expired_credential(
