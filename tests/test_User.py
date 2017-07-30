@@ -3,7 +3,7 @@ import unittest
 import shutil
 from UnlimitID.User import create_app
 from UnlimitID.IdP.cred_server import CredentialServer
-from datetime import date
+from datetime import date, timedelta
 
 
 class UserTestCase(unittest.TestCase):
@@ -25,11 +25,12 @@ class UserTestCase(unittest.TestCase):
         shutil.rmtree('tests/idp_crypto')
 
     # helpers #
-    def create_credential(self):
+    def create_credential(self, timeout_date=None):
         user_token = self.User_cs.get_encrypted_attribute()
         keys = ['name']
         values = ['test']
-        timeout_date = date.today()
+        if timeout_date is None:
+            timeout_date = date.today()
         timeout = timeout_date.isoformat()
         cred_token = self.IdP_cs.issue_credential(
             user_token, keys, values, timeout)
@@ -80,6 +81,17 @@ class UserTestCase(unittest.TestCase):
                            follow_redirects=True)
         assert b'Created show for test at show_test' in rv.data
         assert rv.status_code == 200
+
+    def test_delete_expired_credentials(self):
+        self.create_credential()
+        self.create_credential(timeout_date=date.today()-timedelta(days=20))
+        raised = False
+        try:
+            self.User_cs.delete_expired_credentials()
+            self.User_cs.delete_all_credentials()
+        except:
+            raised = True
+        assert raised is False
 
 if __name__ == '__main__':
     unittest.main()

@@ -116,11 +116,11 @@ class CredentialUser():
     def delete_expired_credentials(self):
         for filename in os.listdir(self.crypto_dir):
             if filename.startswith("cred_"):
-                with open(self.crypto_dir +'/'+ filename, 'rb') as f:
+                with open(self.crypto_dir + '/' + filename, 'rb') as f:
                     cred = decode(f.read())
                     _, _, _, timeout = cred
                     if datetime.strptime(timeout, '%Y-%m-%d').date() < date.today():
-                        os.unlink(self.crypto_dir +'/'+ filename)
+                        os.unlink(self.crypto_dir + '/' + filename)
                         cred_id = filename.split('_')[1]
                         os.unlink(self.crypto_dir + '/mac_'+cred_id)
         return
@@ -128,19 +128,8 @@ class CredentialUser():
     def delete_all_credentials(self):
         for filename in os.listdir(self.crypto_dir):
             if filename.startswith("cred_") or filename.startswith("mac_"):
-                os.unlink(self.crypto_dir +'/'+ filename)
+                os.unlink(self.crypto_dir + '/' + filename)
         return
-
-
-
-
-
-    def get_mac(self, id):
-        try:
-            with open(self.crypto_dir + '/mac_{}'.format(id), 'rb') as f:
-                return(decode(f.read()))
-        except IOError:
-            raise exception('Opening the file failed')
 
     def issue_verify(self, cred_token, user_token):
         cred_issued, k, v, t = cred_token
@@ -205,7 +194,6 @@ class CredentialUser():
         sig_openID = zk.build_proof(env.get())
 
         return (creds, sig_o, sig_openID, Service_name, Uid, k, v, t)
-
 
     def random_id(self):
         return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
