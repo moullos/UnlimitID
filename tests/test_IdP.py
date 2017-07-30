@@ -2,7 +2,7 @@ import unittest
 import shutil
 import os
 from UnlimitID.IdP import create_app
-from UnlimitID.IdP.models import User, Client, Credential, Grant
+from UnlimitID.IdP.models import User, Client, Grant
 from UnlimitID.User.cred_user import CredentialUser
 from petlib.pack import encode, decode
 from cStringIO import StringIO
@@ -192,29 +192,6 @@ class IdPTestCase(unittest.TestCase):
             raised = True
         assert raised is False
 
-    def test_credential_post_already_existing_cred(self):
-        # add a credential
-        self.add_user('test', 'test@unlimitid.com')
-        user_token = self.user_cs.get_encrypted_attribute()
-        rv = self.app.post('unlimitID/credential', data=encode((
-            'test@unlimitid.com',
-            'pass',
-            full_scope,
-            user_token
-        ))
-        )
-        cred_token1 = decode(rv.data)
-        self.user_cs.issue_verify(cred_token1, user_token)
-        rv = self.app.post('unlimitID/credential', data=encode((
-            'test@unlimitid.com',
-            'pass',
-            full_scope,
-            user_token))
-        )
-        cred_token2 = decode(rv.data)
-        self.user_cs.issue_verify(cred_token2, user_token)
-        assert cred_token1 == cred_token2
-
     def test_credential_post_no_attr(self):
         self.add_user('test', 'test@unlimitid.com')
         user_token = self.user_cs.get_encrypted_attribute()
@@ -225,62 +202,6 @@ class IdPTestCase(unittest.TestCase):
             user_token))
         )
         assert b'Cannot issue credential with no attributes' in rv.data
-
-    def test_credential_post_different_keys(self):
-        cred_token = self.add_credential(timeout_date=date.today())
-        user_token = self.user_cs.get_encrypted_attribute()
-        rv = self.app.post('unlimitID/credential', data=encode((
-            'test@unlimitid.com',
-            'pass',
-            ['name'],
-            user_token))
-        )
-        raised = False
-        try:
-            cred_token = decode(rv.data)
-            self.user_cs.issue_verify(cred_token, user_token)
-        except:
-            raised = True
-        assert raised is False
-
-    def add_credential(self, timeout_date=None):
-        if timeout_date is None:
-            timeout_date = date.today() + timedelta(days=14)
-        self.add_user('test', 'test@unlimitID.com')
-        user_token = self.user_cs.get_user_token()
-        user = User.query.filter_by(name='test').first()
-        values = user.get_values_by_keys(full_scope)
-        timeout = timeout_date.isoformat()
-        cred_issued = self.IdP_cs.issue_credential(
-            user_token, full_scope, values, timeout)
-        cred_token = (cred_issued, full_scope, values, timeout)
-        self.user_cs.issue_verify(cred_token, user_token)
-        (_, EGenc, _) = user_token
-        cred = Credential(
-            user_id=user.id,
-            keys=full_scope,
-            values=values,
-            timeout=timeout,
-            credential_issued=cred_issued)
-        self.db.session.add(cred)
-        self.db.session.commit()
-        return cred_token
-
-    def test_credential_post_refresh_period_cred(self):
-        # add a credential
-        timeout_date = date.today() - timedelta(days=13)
-        cred_token_old = self.add_credential(timeout_date)
-        user_token = self.user_cs.get_user_token()
-        rv = self.app.post('unlimitID/credential', data=encode((
-            'test@unlimitID.com',
-            'pass',
-            full_scope,
-            user_token
-        ))
-        )
-        cred_token_new = decode(rv.data)
-        self.user_cs.issue_verify(cred_token_new, user_token)
-        assert cred_token_new != cred_token_old
 
     # / #
     def test_index_status_code(self):

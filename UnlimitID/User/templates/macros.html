@@ -38,6 +38,11 @@
         <label>
             {{ field(type='checkbox', **kwargs) }} {{ field.label }}
         </label>
+         {% if field.errors %}
+            {% for e in field.errors %}
+                <p class="help-block">{{ e }}</p>
+            {% endfor %}
+        {% endif %}
     </div>
 {%- endmacro %}
 

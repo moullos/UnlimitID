@@ -6,7 +6,7 @@ class MultiCheckboxField(SelectMultipleField):
 
 class RegisterForm(Form):
     service_name = StringField('Service Name', [validators.DataRequired()])
-    credential = RadioField('Credentials', choices=[('value','description'),('value_two','whatever')])
+    credential = RadioField('Credentials')
 
 class CredentialForm(Form):
     email = StringField('Email', [validators.Email("Please enter a valid email")])

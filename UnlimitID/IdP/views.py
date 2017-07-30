@@ -1,4 +1,4 @@
-from .models import User, Client, Pseudonym, Credential, Token
+from .models import User, Client, Pseudonym, Token
 from .forms import SignupForm, AuthorizeForm, ClientForm
 from flask import (redirect, url_for, render_template, flash,
                    session, jsonify, request)
@@ -112,24 +112,6 @@ def setUpViews(app, oauth, db, cs):
         if user is not None and user.check_password(password):
             # Checking the users ciphertext
             if user.check_enc_secret(enc_secret):
-                # Checking if a valid credential already exists
-                cred = Credential.query.filter_by(user_id=user.id).first()
-                if cred is not None:
-                    if cred.keys == keys:
-                        if (datetime.strptime(cred.timeout, "%Y-%m-%d").date() -
-                                date.today() >= timedelta(days=2)):
-                            # if the credential expires in more than
-                            # 2 days return the existing credential
-                            return encode((cred.credential_issued,
-                                           cred.keys,
-                                           cred.values,
-                                           cred.timeout))
-                        else:
-                            # if the credential expires in less that
-                            # 2 days return a new credential
-                            db.session.delete(cred)
-                    else:
-                        db.session.delete(cred)
                 # Setting values, keys and timeout for the issued credential
                 values = user.get_values_by_keys(keys)
                 timeout_date = date.today() + \
@@ -137,14 +119,6 @@ def setUpViews(app, oauth, db, cs):
                 timeout = timeout_date.isoformat()
                 cred_issued = cs.issue_credential(
                     user_token, keys, values, timeout)
-                cred = Credential(
-                    user_id=user.id,
-                    keys=keys,
-                    values=values,
-                    timeout=timeout,
-                    credential_issued=cred_issued)
-                db.session.add(cred)
-                db.session.commit()
                 return encode((cred_issued, keys, values, timeout))
             else:
                 return "Unknown user token"
@@ -192,7 +166,7 @@ def setUpViews(app, oauth, db, cs):
                                                      Service_name, uid, keys,
                                                      values, timeout):
                     # Checking if the credential expired
-                    if datetime.strptime(timeout, '%Y-%m-%d').date() > date.today():
+                    if datetime.strptime(timeout, '%Y-%m-%d').date() >= date.today():
                         attr = dict(zip(keys, values))
                         scopes = request.args['scope'].split()
                         k = []

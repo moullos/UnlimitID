@@ -2,6 +2,7 @@
 import os
 import random
 import string
+from datetime import date, datetime
 # Crypto imports
 from petlib.pack import encode, decode
 from petlib.bn import Bn
@@ -27,6 +28,7 @@ class CredentialUser():
         self.crypto_dir = crypto_dir
         if not os.path.exists(crypto_dir):
             os.makedirs(crypto_dir)
+        self.delete_expired_credentials()
         if params is not None and ipub is not None:
             self.params = params
             self.ipub = ipub
@@ -108,8 +110,30 @@ class CredentialUser():
                     attr = ['{}={}'.format(key, value)
                             for key, value in zip(k, v)]
                     creds.append((cred_id,
-                                  'Attributes:{}\nTimeout: {}'.format(', '.join(attr), t)))
+                                  'Attributes: {}\n Timeout: {}'.format(', '.join(attr), t)))
         return creds
+
+    def delete_expired_credentials(self):
+        for filename in os.listdir(self.crypto_dir):
+            if filename.startswith("cred_"):
+                with open(self.crypto_dir +'/'+ filename, 'rb') as f:
+                    cred = decode(f.read())
+                    _, _, _, timeout = cred
+                    if datetime.strptime(timeout, '%Y-%m-%d').date() < date.today():
+                        os.unlink(self.crypto_dir +'/'+ filename)
+                        cred_id = filename.split('_')[1]
+                        os.unlink(self.crypto_dir + '/mac_'+cred_id)
+        return
+
+    def delete_all_credentials(self):
+        for filename in os.listdir(self.crypto_dir):
+            if filename.startswith("cred_") or filename.startswith("mac_"):
+                os.unlink(self.crypto_dir +'/'+ filename)
+        return
+
+
+
+
 
     def get_mac(self, id):
         try:
@@ -181,6 +205,7 @@ class CredentialUser():
         sig_openID = zk.build_proof(env.get())
 
         return (creds, sig_o, sig_openID, Service_name, Uid, k, v, t)
+
 
     def random_id(self):
         return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))

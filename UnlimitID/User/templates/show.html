@@ -11,6 +11,8 @@
             {% call macros.render_form(form, action_url=url_for('show'), 
             action_text='Show', class_='login-form') %}
             {{macros.render_field(form.service_name)}}
+            <b>Choose a credential: </b>
+            {{macros.render_radio_field(form.credential)}}
             {% endcall %}
         </div>
     </body>

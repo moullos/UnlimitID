@@ -34,7 +34,7 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
             keys = form.keys.data
             if keys == []:
                 form.keys.errors.append(
-                    'A credential need to contain at least 1 key')
+                    'A credential needs to contain at least 1 key')
                 return render_template('credential.html', form=form)
             try:
                 user_token = cs.get_user_token()
@@ -53,12 +53,14 @@ def setUpViews(app, crypto_dir, credential_url=None, info_url=None, params=None,
 
     @app.route('/show', methods=['GET', 'POST'])
     def show():
-        form = RegisterForm(request.form)
         creds = cs.list_credential_tokens()
-        form.credential.choices = creds
         if creds == []:
             flash('Could not load credential. Do you have one?')
             return render_template('home.html')
+        form = RegisterForm(request.form)
+        form.credential.choices = creds
+        form.credential.default = creds[0][0]
+
         if request.method == 'POST' and form.validate():
             service_name = form.service_name.data
             credential_id = form.credential.data
