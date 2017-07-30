@@ -4,6 +4,7 @@ import os
 from UnlimitID.IdP import create_app
 from UnlimitID.IdP.models import User, Client, Grant
 from UnlimitID.User.cred_user import CredentialUser
+from UnlimitID.User.amacscreds.amacscreds import cred_secret_issue_user
 from petlib.pack import encode, decode
 from cStringIO import StringIO
 from datetime import date, timedelta
@@ -202,6 +203,28 @@ class IdPTestCase(unittest.TestCase):
             user_token))
         )
         assert b'Cannot issue credential with no attributes' in rv.data
+
+    def test_credential_post_wrong_user_token(self):
+        self.add_user('test', 'test@unlimitID.com')
+        user_token = self.user_cs.get_encrypted_attribute()
+        rv = self.app.post('unlimitID/credential', data=encode((
+            'test@unlimitID.com',
+            'pass',
+            full_scope,
+            user_token
+        ))
+        )
+        user_token = cred_secret_issue_user(
+                self.user_cs.params, self.user_cs.keypair,  self.user_cs.private_attr)
+        rv = self.app.post('unlimitID/credential', data=encode((
+            'test@unlimitID.com',
+            'pass',
+            full_scope,
+            user_token
+        ))
+        )
+        print rv
+        assert b"Unknown user token" in rv.data
 
     # / #
     def test_index_status_code(self):
