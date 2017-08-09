@@ -11,12 +11,12 @@ Full version of the paper published at WPES 2016 is available at http://www.cs.u
 
 
 ### Features
-This repository includes 2 flask applications. UnlimitID/IdP is build upon [flask-oauthlib](https://flask-oauthlib.readthedocs.io/en/latest/) and provides all the typical OAuth2 endpoints along with two additional endpoints providing the necessary anonymous credentials and exposing the IdP's public parameters. UnlimitID/User provides all the out-of-band functionality preluding an UnlimitID flow.
+This repository includes 2 flask applications. UnlimitID/IdP is build upon [flask-oauthlib](https://flask-oauthlib.readthedocs.io/en/latest/) and provides all the typical OAuth2 endpoints along with two additional endpoints providing the necessary anonymous credentials and exposing the IdP's public parameters. UnlimitID/User provides all the out-of-band functionality preluding an UnlimitID flow. A demo version of the IdP can be found [here](https://unlimitid.online).
 
-As both packages use [petlib](http://petlib.readthedocs.io/en/latest/) install the necessary packages before attemping to run UnlimitID
+As both packages use [petlib](http://petlib.readthedocs.io/en/latest/) install the necessary libraries before attemping to run UnlimitID.
 
 ### Running the identity provider
-**The easiers way to run the identity provider is through docker:**
+**The easiest way to run the identity provider is through docker:**
 1. Get the latest container
   ```
   $ docker pull unlimitid/idp:latest
