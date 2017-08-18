@@ -10,8 +10,8 @@ setup(
     author='Panagiotis Moullotou',
     author_email='p.moullotou.16@ucl.ac.uk',
     url='https://github.com/moullos/UnlimitID',
-    download_url='https://github.com/moullos/UnlimitID/archice/0.1.tar.gz',
-    classfiers=[],
+    download_url='httpas://github.com/moullos/UnlimitID/archive/0.1.tar.gz',
+    classifiers=[],
     include_package_data=True,
     install_requires=[
         'flask==0.11.1',
