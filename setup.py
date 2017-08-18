@@ -1,10 +1,17 @@
 from setuptools import setup
- 
+
 setup(
     name='UnlimitID',
     packages=['UnlimitID',
               'UnlimitID.IdP',
               'UnlimitID.User'],
+    version='0.1',
+    description='An implementation of UnlimitID',
+    author='Panagiotis Moullotou',
+    author_email='p.moullotou.16@ucl.ac.uk',
+    url='https://github.com/moullos/UnlimitID',
+    download_url='https://github.com/moullos/UnlimitID/archice/0.1.tar.gz',
+    classfiers=[],
     include_package_data=True,
     install_requires=[
         'flask==0.11.1',
