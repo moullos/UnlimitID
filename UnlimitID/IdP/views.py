@@ -91,14 +91,14 @@ def setUpViews(app, oauth, db, cs):
     @app.route('/unlimitID/info', methods=['POST'])
     def info():
         """
-        A page that exposes the server's public parameters
+        A endpoint that exposes the server's public parameters
         """
         return encode(cs.get_info())
 
     @app.route('/unlimitID/credential', methods=['POST'])
     def credential(*args, **kwargs):
         """
-        A page for users to request credentials
+        A endpoint for users to request credentials
         """
         try:
             (email, password, keys, user_token) = decode(request.data)
@@ -142,10 +142,10 @@ def setUpViews(app, oauth, db, cs):
         """
         The server's authorization endpoint
 
-        In UnlimitID, this function should ask the user to select
-        which attributes of his (locally blinded) credential to
-        reveal to the RP. After the IdP validates the credential,
-        a database record with the revealed attributes is created.
+        In UnlimitID, this function asks the user to upload a file
+        containing the contents of the show protocol. After the IdP 
+        validates the credential, a database record with the revealed 
+        attributes is created.
         """
         form = AuthorizeForm()
         if request.method == 'GET':

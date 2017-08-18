@@ -18,8 +18,8 @@
                 {{macros.render_field(form.confirm)}}
                 {{macros.render_field(form.client_type)}}
                 {{macros.render_field(form.redirect_uris)}}
-                <b>Scope</b><p>
-                Please only request the least data necessary 
+                <b>Default Scope</b><p>
+                This will be the scope granted if the scope parameter is omitted during the flow 
                 {{macros.render_checkbox_field(form.scopes)}}
             {% endcall %}
         </div>
