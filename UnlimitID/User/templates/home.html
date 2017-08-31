@@ -3,6 +3,9 @@
 {% block body %}
  <div class="row">
     <div class="col-xs-12 col-md-3 col-sm-4 col-sm-offset-4 col-md-offset-4 col-lg-3 col-lg-offset-4">
+    <b>To use the user's endpoint:</b><br>
+    1. Get a credential by authenticating and choosing the attributes to include to it <br>
+    2. Use it to create a 'show' file. It will be saved at REPOSITORY_ROOT/instance/User/Show <br>
     <p><a href="{{ url_for('get_credential') }}" class="btn btn-info" role="button">Get credential</a></p>
     <a href="{{ url_for('show') }}" class="btn btn-info" role="button">Show for a specific service</a>
 	</div>

@@ -3,8 +3,13 @@
 {% block body %}
 <div class="row">
     <div class="col-xs-12 col-md-3 col-sm-4 col-sm-offset-4 col-md-offset-4 col-lg-3 col-lg-offset-4">
-    <p><a href="{{ url_for('signup') }}" class="btn btn-info" role="button">Signup as a user</a></p>
-    <a href="{{ url_for('client_signup') }}" class="btn btn-info" role="button">Signup as a client</a>
+    <b>To use the IdP you have a user's endpoint running, and a RP. For testing purpose use any RP at @moullos/UnlimitID/tests/compatibility. </b><br>
+    Then: <br>
+    1. Register your RP to the IdP <br>
+    2. Register a valid user <br>
+    3. Use the user's endpoint to authorize the anonymous tranfer of user's attributes to the RP. <br>
+    <p><a href="{{ url_for('signup') }}" class="btn btn-info" role="button">Signup as a User</a></p>
+    <a href="{{ url_for('client_signup') }}" class="btn btn-info" role="button">Signup as a RP</a>
 	</div>
 </div>
 
