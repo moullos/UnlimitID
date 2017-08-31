@@ -1,6 +1,7 @@
 from UnlimitID.User import create_app
 CRYPTO_DIR = 'crypto_user'
-CREDENTIAL_URL = 'http://127.0.0.1:5000/unlimitID/credential'
-INFO_URL = 'http://127.0.0.1:5000/unlimitID/.well-known/info'
-app = create_app(CRYPTO_DIR, CREDENTIAL_URL, INFO_URL)
-app.run(host='localhost', port=3000)
+idp_url = 'https://unlimitid.online'
+if __name__ == '__main__':
+    app = create_app(CRYPTO_DIR, idp_url=idp_url)
+    app.secret_key = 'dev'
+    app.run(host='localhost', port=3000, debug=True)
