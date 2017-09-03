@@ -3,11 +3,11 @@
 {% block body %}
 <div class="row">
     <div class="col-xs-12 col-md-3 col-sm-4 col-sm-offset-4 col-md-offset-4 col-lg-3 col-lg-offset-4">
-    <b>To use the IdP you must have a user's endpoint running, and a RP. For testing purpose use any RP from <a href="https://github.com/moullos/UnlimitID/tree/master/tests/compatibility">here</a>. </b><br>
+    <b>To use the IdP you must have a user's endpoint running, and a RP. For testing purpose use this RP from <a href="https://github.com/moullos/UnlimitID/tree/master/tests/compatibility/Flask-OAuthlib">here</a>. </b><br>
     Then: <br>
-    1. Register your RP to the IdP <br>
-    2. Register a valid user <br>
-    3. Use the user's endpoint to authorize the anonymous tranfer of user's attributes to the RP. <br>
+    1. Register a valid user <br>
+    2. Use the user's endpoint to authorize the anonymous tranfer of user's attributes to the RP. <br>
+    If you are running the User and the RP on the same machine make sure they do not share cookies.
     <p><a href="{{ url_for('signup') }}" class="btn btn-info" role="button">Register a User</a></p>
     <a href="{{ url_for('client_signup') }}" class="btn btn-info" role="button">Register a RP</a>
 	</div>
