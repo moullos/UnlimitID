@@ -61,11 +61,9 @@ As both packages use [petlib](http://petlib.readthedocs.io/en/latest/) install t
   ```
   $ pip install .
   ```
-5. Create a file that creates the app and runs it
-  ```python
-  from UnlimitID.IdP import create_app
-  app = create_app('crypto_idp')
-  app.run()
+5. Use the run_IdP.py
+  ```
+  $ python run_IdP.py
   ```
 
 ### Running the user
@@ -90,13 +88,12 @@ As both packages use [petlib](http://petlib.readthedocs.io/en/latest/) install t
   ```
   $ pip install .
   ```
-5. Create a file that creates the app and runs it
-  ```python
-  from UnlimitID.User import create_app
-  app = create_app('crypto_user',IDP_URL)
-  app.run(host='localhost',port=3000)
+5. Use the run_user.py
   ```
-  
+  $ python run_user.py
+  ```
+Note: If you are running more than 1 components of the system locally, make sure that their cookies are isolated.
+
 ### Running the tests
 **Just install and run tox after installing the package**
 1. Install tox
