@@ -14,7 +14,7 @@ setup(
     classifiers=[],
     include_package_data=True,
     install_requires=[
-        'flask==0.11.1',
+        'flask==1.0',
         'Flask-OAuthlib',
         'Flask-SQLAlchemy==2.1',
         'petlib',
