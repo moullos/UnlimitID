@@ -1,4 +1,4 @@
-flask==0.11.1
+flask==1.0
 Flask-OAuthlib
 Flask-SQLAlchemy==2.1
 petlib
