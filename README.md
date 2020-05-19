@@ -7,7 +7,7 @@ UnlimitID is a method for enhancing the privacy of commodity OAuth and applicati
 the most widely used protocols on the Web, but it exposes each of the requests of a user for data by each relying party (RP) to the identity provider (IdP). Our approach allows for the creation of multiple persistent and unlinkable pseudo-
 identities and requires no change in the deployed code of relying parties, only in identity providers and the client.
 
-Full version of the paper published at WPES 2016 is available at http://www.cs.ucl.ac.uk/staff/M.Isaakidis/p/UnlimitID_WPES16.pdf
+Full version of the paper published at WPES 2016 is available at http://www0.cs.ucl.ac.uk/staff/G.Danezis/papers/UnlimitID_WPES16.pdf
 
 
 ### Features
