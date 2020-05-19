@@ -1,5 +1,4 @@
 # UnlimitID
-[![Build Status](https://travis-ci.org/moullos/UnlimitID.svg?branch=master)](https://travis-ci.org/moullos/UnlimitID)
 [![Coverage Status](https://coveralls.io/repos/github/moullos/UnlimitID/badge.svg?branch=master)](https://coveralls.io/github/moullos/UnlimitID?branch=master)
 ## Privacy-Preserving Federated Identity Management using Algebraic MACs
 
